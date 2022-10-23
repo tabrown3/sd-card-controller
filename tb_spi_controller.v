@@ -22,11 +22,21 @@ module tb_spi_controller();
 
     initial begin
         #10;
+
         out_word = 8'ha6;
         execute = 1'b1;
         #1;
         execute = 1'b0;
+
+        #10;
+
+        out_word = 8'hc3;
+        execute = 1'b1;
+        #1;
+        execute = 1'b0;
+
         #20;
+
         $stop;
     end
 
@@ -35,5 +45,7 @@ module tb_spi_controller();
         clk = ~clk;
         #0.5;
         clk = ~clk;
+
+        miso = $random;
     end
 endmodule
