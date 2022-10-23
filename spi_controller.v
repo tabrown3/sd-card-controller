@@ -8,7 +8,7 @@ module spi_controller
     input [FRAME_WIDTH-1'b1:0] out_word,
     output spi_clk,
     output reg mosi = 1'b1,
-    output reg [FRAME_WIDTH-1'b1:0] in_word,
+    output reg [FRAME_WIDTH-1'b1:0] in_word = 8'hff,
     output reg finished = 1'b0
 );
     reg executing = 1'b0;
@@ -38,7 +38,9 @@ module spi_controller
     always @(posedge clk) begin
         if (executing) begin
             in_word[FRAME_WIDTH - 1'b1 - cur_bit] <= miso;
-            cur_bit <= cur_bit + 1;
+            cur_bit <= cur_bit + 4'h1;
+        end else begin
+            cur_bit <= 4'h0;
         end
     end
 endmodule
