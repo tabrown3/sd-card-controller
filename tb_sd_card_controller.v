@@ -1,3 +1,4 @@
+`timescale 1us/100ns
 module tb_sd_card_controller();
 
     reg op_code = 1'b0;
@@ -14,7 +15,7 @@ module tb_sd_card_controller();
     wire spi_clk;
     wire busy;
 
-    sd_card_controller (
+    sd_card_controller SDCC0 (
         .op_code(op_code),
         .execute(execute),
         .clk(clk),
@@ -29,4 +30,16 @@ module tb_sd_card_controller();
         .spi_clk(spi_clk),
         .busy(busy)
     );
+
+    initial begin
+        #1000;
+        $stop;
+    end
+
+    always begin
+        #0.5;
+        clk = ~clk;
+        #0.5;
+        clk = ~clk;
+    end
 endmodule
