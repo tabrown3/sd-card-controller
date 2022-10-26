@@ -9,12 +9,14 @@ module spi_controller
     output spi_clk,
     output reg mosi = 1'b1,
     output reg [FRAME_WIDTH-1'b1:0] in_word = 8'hff,
-    output reg finished = 1'b0
+    output reg finished = 1'b0,
+    output busy
 );
     reg executing = 1'b0;
     reg [3:0] cur_bit = 4'h0;
 
     assign spi_clk = executing ? clk : 1'b0;
+    assign busy = executing;
     always @(negedge clk) begin
         if (finished) begin
             finished <= 1'b0;
