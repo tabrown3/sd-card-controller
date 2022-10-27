@@ -29,8 +29,8 @@ module sd_card_controller (
     integer cur_count = 0;
     wire txrx_finished;
     wire txrx_busy;
-    wire tx_byte;
-    wire rx_byte;
+    wire [7:0] tx_byte;
+    wire [7:0] rx_byte;
 
     assign busy = executing;
     assign tx_byte = SEND_INIT_NO_OPS ? 8'hff : outgoing_byte;
