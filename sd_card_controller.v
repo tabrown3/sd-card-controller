@@ -48,26 +48,28 @@ module sd_card_controller (
     );
 
     always @(negedge clk) begin
+        if (execute_txrx) begin
+            execute_txrx <= 1'b0;
+        end
+
         case (cur_state)
             UNINITIALIZED: begin
                 cur_state <= SEND_INIT_NO_OPS;
                 target_count <= 80;
                 cur_count <= 0;
-                executing <= 1'b1;
+                executing <= 1'b1; // let controllers know we're busy
+                execute_txrx <= 1'b1; // start executing txrx sequences
             end
             SEND_INIT_NO_OPS: begin
-                if (cur_count < target_count) begin
-                    if (!txrx_busy) begin
-                        execute_txrx <= 1'b1;
-                        cur_count <= cur_count + 1;
-                    end else begin
-                        execute_txrx <= 1'b0;
+                if (cur_count >= target_count) begin // once 80 blank bytes have been sent
+                    if (txrx_finished) begin // once current sequence completes
+                        cur_state <= SEND_CMD0; // change state
+                        target_count <= 0;
+                        cur_count <= 0;
                     end
-                end else begin
-                    cur_state <= SEND_CMD0;
-                    target_count <= 0;
-                    cur_count <= 0;
-                    execute_txrx <= 1'b0;
+                end else if (txrx_finished) begin // once current sequence completes
+                    cur_count <= cur_count + 1; // increment count
+                    execute_txrx <= 1'b1; // start next txrx sequence
                 end
             end
             default: begin
