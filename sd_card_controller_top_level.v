@@ -71,12 +71,39 @@ input 		     [1:0]		bottom_IN;
 //=======================================================
 
 
-
+reg op_code = 1'b0;
+reg execute = 1'b0;
+reg [25:0] sector_address = {26{1'b0}};
+reg [7:0] outgoing_byte = 8'h00;
+wire clk;
+wire [7:0] incoming_byte;
+wire finished_byte;
+wire finished_sector;
+wire busy;
 
 //=======================================================
 //  Structural coding
 //=======================================================
 
+sd_card_pll PLL0(
+    .inclk0(CLOCK_50),
+    .c0(clk)
+);
 
+sd_card_controller SDCC0 (
+    .op_code(op_code),
+    .execute(execute),
+    .clk(clk),
+    .sector_address(sector_address),
+    .miso(bottom[1]),
+    .outgoing_byte(outgoing_byte),
+    .cs(bottom[0]),
+    .incoming_byte(incoming_byte),
+    .mosi(bottom[5]),
+    .finished_byte(finished_byte),
+    .finished_sector(finished_sector),
+    .spi_clk(bottom[3]),
+    .busy(busy)
+);
 
 endmodule
