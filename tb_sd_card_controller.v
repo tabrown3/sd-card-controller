@@ -32,7 +32,7 @@ module tb_sd_card_controller();
     );
 
     initial begin
-        #1000;
+        #2000;
         $stop;
     end
 
