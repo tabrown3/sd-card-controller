@@ -64,9 +64,10 @@ module sd_card_controller (
                         execute_txrx <= 1'b0;
                     end
                 end else begin
+                    cur_state <= SEND_CMD0;
                     target_count <= 0;
                     cur_count <= 0;
-                    // transition state
+                    execute_txrx <= 1'b0;
                 end
             end
             default: begin
