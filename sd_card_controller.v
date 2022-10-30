@@ -5,6 +5,7 @@ module sd_card_controller (
     input [25:0] sector_address, // multiply this by 512 to get byte address
     input miso,
     input [7:0] outgoing_byte, // byte to write
+    input btn,
     output reg cs = 1'b1, // chip select
     output [7:0] incoming_byte, // holds byte being read
     output mosi,
@@ -72,8 +73,10 @@ module sd_card_controller (
     always @(negedge clk) begin
         case (cur_state)
             UNINITIALIZED: begin
-                cur_state <= SEND_INIT_NO_OPS;
-                initialize_state <= 1'b1;
+                if (!btn) begin
+                    cur_state <= SEND_INIT_NO_OPS;
+                    initialize_state <= 1'b1;
+                end
             end
             SEND_INIT_NO_OPS: begin
                 if (initialize_state) begin

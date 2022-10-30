@@ -102,6 +102,7 @@ sd_card_controller SDCC0 (
     .sector_address(sector_address),
     .miso(bottom[5]), // weak pull-up enabled
     .outgoing_byte(outgoing_byte),
+	.btn(KEY[0]),
     .cs(bottom[0]),
     .incoming_byte(incoming_byte),
     .mosi(mosi),
