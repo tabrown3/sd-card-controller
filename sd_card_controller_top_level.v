@@ -81,6 +81,7 @@ wire mosi;
 wire finished_byte;
 wire finished_sector;
 wire busy;
+wire debug_clk;
 
 //=======================================================
 //  Structural coding
@@ -90,7 +91,8 @@ assign bottom[1] = mosi ? 1'bz : 1'b0;
 
 sd_card_pll PLL0(
     .inclk0(CLOCK_50),
-    .c0(clk)
+    .c0(clk),
+    .c1(debug_clk)
 );
 
 sd_card_controller SDCC0 (

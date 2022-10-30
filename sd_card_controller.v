@@ -37,7 +37,7 @@ module sd_card_controller (
     reg execute_txrx = 1'b0;
     integer target_count = 0;
     integer cur_count = 0;
-    reg [5:0] cur_cmd;
+    reg [7:0] cur_cmd;
     reg [31:0] cur_args;
     reg [7:0] cur_crc;
     reg initialize_state = 1'b0;
@@ -51,7 +51,7 @@ module sd_card_controller (
     wire [5:0] cmd_ind;
 
     assign busy = executing;
-    assign full_cmd = {1'b0, 1'b1, cur_cmd, cur_args, cur_crc};
+    assign full_cmd = {cur_cmd, cur_args, cur_crc};
     assign tx_byte = send_no_op ? 8'hff : cmd_byte_buffer;
 
     spi_controller SPI_CONT(
