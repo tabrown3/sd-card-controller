@@ -6,7 +6,7 @@ module sd_card_controller (
     input miso,
     input [7:0] outgoing_byte, // byte to write
     input btn,
-    output reg cs = 1'b1, // chip select
+    output reg cs, // chip select
     output [7:0] incoming_byte, // holds byte being read
     output mosi,
     output reg finished_byte = 1'b0, // indicates a byte has been written or read
@@ -73,6 +73,7 @@ module sd_card_controller (
     always @(negedge clk) begin
         case (cur_state)
             UNINITIALIZED: begin
+                cs <= 1'b1;
                 if (!btn) begin
                     cur_state <= SEND_INIT_NO_OPS;
                     initialize_state <= 1'b1;

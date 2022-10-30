@@ -77,7 +77,6 @@ reg [25:0] sector_address = {26{1'b0}};
 reg [7:0] outgoing_byte = 8'h00;
 wire clk;
 wire [7:0] incoming_byte;
-wire mosi;
 wire finished_byte;
 wire finished_sector;
 wire busy;
@@ -86,8 +85,6 @@ wire debug_clk;
 //=======================================================
 //  Structural coding
 //=======================================================
-
-assign bottom[1] = mosi ? 1'bz : 1'b0;
 
 sd_card_pll PLL0(
     .inclk0(CLOCK_50),
@@ -105,7 +102,7 @@ sd_card_controller SDCC0 (
 	.btn(KEY[0]),
     .cs(bottom[0]),
     .incoming_byte(incoming_byte),
-    .mosi(mosi),
+    .mosi(bottom[1]),
     .finished_byte(finished_byte),
     .finished_sector(finished_sector),
     .spi_clk(bottom[3]),

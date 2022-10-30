@@ -7,7 +7,7 @@ module spi_controller
     input miso,
     input [FRAME_WIDTH-1'b1:0] out_word,
     output spi_clk,
-    output reg mosi = 1'b1,
+    output reg mosi,
     output reg [FRAME_WIDTH-1'b1:0] in_word = 8'hff,
     output reg finished = 1'b0,
     output busy
@@ -26,6 +26,8 @@ module spi_controller
             if (execute) begin
                 executing <= 1'b1;
                 mosi <= out_word[FRAME_WIDTH - 1'b1 - cur_bit];
+            end else begin
+                mosi <= 1'b1;
             end
         end else begin
             if (cur_bit < FRAME_WIDTH) begin
