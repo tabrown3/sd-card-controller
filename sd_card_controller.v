@@ -25,13 +25,13 @@ module sd_card_controller (
     localparam [4:0] AWAIT_ACMD41_RES = 5'h07; // don't forget to handle error
 
     // SD commands
-    localparam [7:0] CMD0 = {1'b0, 1'b1, 6'd0}; // reset SD card
-    localparam [7:0] CMD8 = {1'b0, 1'b1, 6'd8}; // interface condition (expected voltage, etc)
-    localparam [7:0] CMD55 = {1'b0, 1'b1, 6'd55}; // precedes app commands - may not be needed
-    localparam [7:0] CMD58 = {1'b0, 1'b1, 6'd58}; // read OCR, CCS bit assigned
+    localparam [5:0] CMD0 = 6'd0; // reset SD card
+    localparam [5:0] CMD8 = 6'd8; // interface condition (expected voltage, etc)
+    localparam [5:0] CMD55 = 6'd55; // precedes app commands - may not be needed
+    localparam [5:0] CMD58 = 6'd58; // read OCR, CCS bit assigned
 
     // SD app commands
-    localparam [7:0] ACMD41 = {1'b0, 1'b1, 6'd41}; // request card capacity and begin init process
+    localparam [5:0] ACMD41 = 6'd41; // request card capacity and begin init process
 
     reg [4:0] cur_state = UNINITIALIZED;
     reg executing = 1'b0;
@@ -39,9 +39,9 @@ module sd_card_controller (
     reg p_execute_txrx = 1'b0;
     integer target_count = 0;
     integer cur_count = 0;
-    reg [7:0] cur_cmd;
+    reg [5:0] cur_cmd;
     reg [31:0] cur_args;
-    reg [7:0] cur_crc;
+    reg [6:0] cur_crc;
     reg initialize_state = 1'b0;
     reg send_no_op = 1'b0;
     reg [7:0] cmd_byte_buffer;
@@ -55,7 +55,7 @@ module sd_card_controller (
     wire execute_txrx = p_execute_txrx ^ execute_txrx_reg;
 
     assign busy = executing;
-    assign full_cmd = {cur_cmd, cur_args, cur_crc};
+    assign full_cmd = {1'b0, 1'b1, cur_cmd, cur_args, cur_crc, 1'b1};
     assign tx_byte = send_no_op ? 8'hff : cmd_byte_buffer;
 
     spi_controller SPI_CONT(
@@ -110,9 +110,9 @@ module sd_card_controller (
                     send_no_op <= 1'b0;
 
                     cur_cmd <= CMD0;
-                    cur_args <= {32{1'b1}};
-                    cur_crc <= 8'h95;
-                    cmd_byte_buffer <= CMD0;
+                    cur_args <= {32{1'b0}};
+                    cur_crc <= 7'h4a;
+                    cmd_byte_buffer <= {1'b0, 1'b1, CMD0};
 
                     execute_txrx_reg <= ~execute_txrx_reg;
                     cs <= 1'b0;
@@ -121,7 +121,7 @@ module sd_card_controller (
                         if (txrx_finished) begin // once current sequence completes
                             cur_state <= AWAIT_CMD0_RES; // change state
                             initialize_state <= 1'b1;
-                            cs <= 1'b1;
+                            // cs <= 1'b1;
                         end
                     end else if (txrx_finished) begin
                         cmd_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];

@@ -81,10 +81,14 @@ wire finished_byte;
 wire finished_sector;
 wire busy;
 wire debug_clk;
+wire miso;
 
 //=======================================================
 //  Structural coding
 //=======================================================
+
+assign miso = bottom[5];
+assign bottom[5] = 1'bz;
 
 sd_card_pll PLL0(
     .inclk0(CLOCK_50),
@@ -97,7 +101,7 @@ sd_card_controller SDCC0 (
     .execute(execute),
     .clk(clk),
     .sector_address(sector_address),
-    .miso(bottom[5]), // weak pull-up enabled
+    .miso(miso), // weak pull-up enabled
     .outgoing_byte(outgoing_byte),
 	.btn(KEY[0]),
     .cs(bottom[0]),
