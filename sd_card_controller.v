@@ -127,6 +127,36 @@ module sd_card_controller (
                 // end
             end
             SEND_CMD8: begin
+                /*** DUPLICATED FROM SEND_CMD0 ***/
+                if (initialize_state) begin
+                    initialize_state <= 1'b0;
+
+                    target_count <= 6;
+                    cur_count <= 1;
+                    send_no_op <= 1'b0;
+
+                    cur_cmd <= CMD8;
+                    cur_args <= {{16{1'b0}}, 8'h01, 8'b10101010};
+                    cur_crc <= 7'b0000111;
+                    cmd_byte_buffer <= {1'b0, 1'b1, CMD8};
+
+                    execute_txrx_reg <= ~execute_txrx_reg;
+                    cs_reg <= 1'b0;
+                end else begin
+                    if (cur_count >= target_count) begin
+                        if (txrx_finished) begin // once current sequence completes
+                            target_count <= 80;
+                            await_res <= 1'b1;
+                            transition_to(SEND_X_NO_OPS, PROCESS_CMD8_RES);
+                        end
+                    end else if (txrx_finished) begin
+                        cmd_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
+                        cur_count <= cur_count + 1; // increment count
+                        execute_txrx_reg <= ~execute_txrx_reg;
+                    end
+                end
+            end
+            PROCESS_CMD8_RES: begin
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);
