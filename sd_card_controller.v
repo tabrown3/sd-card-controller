@@ -137,7 +137,7 @@ module sd_card_controller (
 
                     cur_cmd <= CMD8;
                     cur_args <= {{16{1'b0}}, 8'h01, 8'b10101010};
-                    cur_crc <= 7'b0000111;
+                    cur_crc <= 7'b1000011;
                     cmd_byte_buffer <= {1'b0, 1'b1, CMD8};
 
                     execute_txrx_reg <= ~execute_txrx_reg;
