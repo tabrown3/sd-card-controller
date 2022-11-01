@@ -8,17 +8,19 @@ module spi_controller
     input [FRAME_WIDTH-1'b1:0] out_word,
     output spi_clk,
     output mosi,
-    output reg [FRAME_WIDTH-1'b1:0] in_word = 8'hff,
+    output [FRAME_WIDTH-1'b1:0] in_word,
     output reg finished = 1'b0,
     output busy
 );
     reg executing = 1'b0;
     reg [3:0] cur_bit = 4'h0;
     reg mosi_reg = 1'b1;
+    reg [FRAME_WIDTH-1'b1:0] in_word_reg = {FRAME_WIDTH{1'b1}};
 
     assign spi_clk = executing ? clk : 1'b0;
     assign busy = executing;
     assign mosi = mosi_reg; // init to 1'b1 seems only to work like this
+    assign in_word = in_word_reg;
     always @(negedge clk) begin
         if (finished) begin
             finished <= 1'b0;
@@ -41,7 +43,7 @@ module spi_controller
     
     always @(posedge clk) begin
         if (executing) begin
-            in_word[FRAME_WIDTH - 1'b1 - cur_bit] <= miso;
+            in_word_reg[FRAME_WIDTH - 1'b1 - cur_bit] <= miso;
             cur_bit <= cur_bit + 4'h1;
         end else begin
             cur_bit <= 4'h0;

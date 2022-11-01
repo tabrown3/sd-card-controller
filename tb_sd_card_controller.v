@@ -43,6 +43,7 @@ module tb_sd_card_controller();
     always begin
         #0.5;
         clk = ~clk;
+        miso = $random;
         #0.5;
         clk = ~clk;
     end
