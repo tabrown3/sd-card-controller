@@ -81,25 +81,7 @@ module sd_card_controller (
                 end
             end
             SEND_INIT_NO_OPS: begin
-                if (initialize_state) begin
-                    initialize_state <= 1'b0;
-
-                    target_count <= 80;
-                    cur_count <= 0;
-                    send_no_op <= 1'b1; // we're just running the clk, no cmd
-
-                    executing <= 1'b1; // let controllers know we're busy
-                    execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
-                end else begin
-                    if (cur_count >= target_count) begin // once 80 blank bytes have been sent
-                        if (txrx_finished) begin // once current sequence completes
-                            transition_to(SEND_CMD0);
-                        end
-                    end else if (txrx_finished) begin // once current sequence completes
-                        cur_count <= cur_count + 1; // increment count
-                        execute_txrx_reg <= ~execute_txrx_reg; // start next txrx sequence
-                    end
-                end
+                send_no_ops(80, SEND_CMD0);
             end
             SEND_CMD0: begin
                 if (initialize_state) begin
@@ -130,26 +112,7 @@ module sd_card_controller (
                 end
             end
             AWAIT_CMD0_RES: begin
-                /*** DUPLICATED FROM SEND_INIT_NO_OPS ***/
-                if (initialize_state) begin
-                    initialize_state <= 1'b0;
-
-                    target_count <= 80;
-                    cur_count <= 0;
-                    send_no_op <= 1'b1; // we're just running the clk, no cmd
-
-                    executing <= 1'b1; // let controllers know we're busy
-                    execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
-                end else begin
-                    if (cur_count >= target_count) begin // once 80 blank bytes have been sent
-                        if (txrx_finished) begin // once current sequence completes
-                            transition_to(SEND_CMD8);
-                        end
-                    end else if (txrx_finished) begin // once current sequence completes
-                        cur_count <= cur_count + 1; // increment count
-                        execute_txrx_reg <= ~execute_txrx_reg; // start next txrx sequence
-                    end
-                end
+                send_no_ops(80, SEND_CMD8);
             end
             SEND_CMD8: begin
             end
@@ -169,6 +132,30 @@ module sd_card_controller (
         begin
             cur_state <= next_state;
             initialize_state <= 1'b1;
+        end
+    endtask
+
+    task send_no_ops (input integer count_to, input [4:0] next_state);
+        begin
+            if (initialize_state) begin
+                initialize_state <= 1'b0;
+
+                target_count <= count_to;
+                cur_count <= 0;
+                send_no_op <= 1'b1; // we're just running the clk, no cmd
+
+                executing <= 1'b1; // let controllers know we're busy
+                execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
+            end else begin
+                if (cur_count >= target_count) begin // once 80 blank bytes have been sent
+                    if (txrx_finished) begin // once current sequence completes
+                        transition_to(next_state);
+                    end
+                end else if (txrx_finished) begin // once current sequence completes
+                    cur_count <= cur_count + 1; // increment count
+                    execute_txrx_reg <= ~execute_txrx_reg; // start next txrx sequence
+                end
+            end
         end
     endtask
 endmodule
