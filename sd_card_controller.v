@@ -6,7 +6,7 @@ module sd_card_controller (
     input miso,
     input [7:0] outgoing_byte, // byte to write
     input btn,
-    output reg cs, // chip select
+    output cs, // chip select
     output [7:0] incoming_byte, // holds byte being read
     output mosi,
     output reg finished_byte = 1'b0, // indicates a byte has been written or read
@@ -45,6 +45,7 @@ module sd_card_controller (
     reg initialize_state = 1'b0;
     reg send_no_op = 1'b0;
     reg [7:0] cmd_byte_buffer;
+    reg cs_reg = 1'b1;
     wire txrx_finished;
     wire txrx_busy;
     wire [7:0] tx_byte;
@@ -57,6 +58,7 @@ module sd_card_controller (
     assign busy = executing;
     assign full_cmd = {1'b0, 1'b1, cur_cmd, cur_args, cur_crc, 1'b1};
     assign tx_byte = send_no_op ? 8'hff : cmd_byte_buffer;
+    assign cs = cs_reg;
 
     spi_controller SPI_CONT(
         .execute(execute_txrx),
@@ -73,7 +75,7 @@ module sd_card_controller (
     always @(negedge clk) begin
         case (cur_state)
             UNINITIALIZED: begin
-                cs <= 1'b1;
+                cs_reg <= 1'b1;
                 if (!btn) begin
                     cur_state <= SEND_INIT_NO_OPS;
                     initialize_state <= 1'b1;
@@ -115,13 +117,13 @@ module sd_card_controller (
                     cmd_byte_buffer <= {1'b0, 1'b1, CMD0};
 
                     execute_txrx_reg <= ~execute_txrx_reg;
-                    cs <= 1'b0;
+                    cs_reg <= 1'b0;
                 end else begin
                     if (cur_count >= target_count) begin
                         if (txrx_finished) begin // once current sequence completes
                             cur_state <= AWAIT_CMD0_RES; // change state
                             initialize_state <= 1'b1;
-                            // cs <= 1'b1;
+                            // cs_reg <= 1'b1;
                         end
                     end else if (txrx_finished) begin
                         cmd_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
