@@ -7,6 +7,7 @@ module tb_sd_card_controller();
     reg [25:0] sector_address = {26{1'b0}};
     reg miso = 1'b0;
     reg [7:0] outgoing_byte = 8'h00;
+    reg btn = 1'b1;
     wire cs;
     wire [7:0] incoming_byte;
     wire mosi;
@@ -22,6 +23,7 @@ module tb_sd_card_controller();
         .sector_address(sector_address),
         .miso(miso),
         .outgoing_byte(outgoing_byte),
+        .btn(btn),
         .cs(cs),
         .incoming_byte(incoming_byte),
         .mosi(mosi),
@@ -32,6 +34,8 @@ module tb_sd_card_controller();
     );
 
     initial begin
+        #50;
+        btn = 1'b0;
         #2000;
         $stop;
     end
