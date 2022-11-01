@@ -77,8 +77,7 @@ module sd_card_controller (
             UNINITIALIZED: begin
                 cs_reg <= 1'b1;
                 if (!btn) begin
-                    cur_state <= SEND_INIT_NO_OPS;
-                    initialize_state <= 1'b1;
+                    transition_to(SEND_INIT_NO_OPS);
                 end
             end
             SEND_INIT_NO_OPS: begin
@@ -94,8 +93,7 @@ module sd_card_controller (
                 end else begin
                     if (cur_count >= target_count) begin // once 80 blank bytes have been sent
                         if (txrx_finished) begin // once current sequence completes
-                            cur_state <= SEND_CMD0; // change state
-                            initialize_state <= 1'b1;
+                            transition_to(SEND_CMD0);
                         end
                     end else if (txrx_finished) begin // once current sequence completes
                         cur_count <= cur_count + 1; // increment count
@@ -121,8 +119,7 @@ module sd_card_controller (
                 end else begin
                     if (cur_count >= target_count) begin
                         if (txrx_finished) begin // once current sequence completes
-                            cur_state <= AWAIT_CMD0_RES; // change state
-                            initialize_state <= 1'b1;
+                            transition_to(AWAIT_CMD0_RES);
                             // cs_reg <= 1'b1;
                         end
                     end else if (txrx_finished) begin
@@ -146,8 +143,7 @@ module sd_card_controller (
                 end else begin
                     if (cur_count >= target_count) begin // once 80 blank bytes have been sent
                         if (txrx_finished) begin // once current sequence completes
-                            cur_state <= SEND_CMD8; // change state
-                            initialize_state <= 1'b1;
+                            transition_to(SEND_CMD8);
                         end
                     end else if (txrx_finished) begin // once current sequence completes
                         cur_count <= cur_count + 1; // increment count
@@ -158,7 +154,7 @@ module sd_card_controller (
             SEND_CMD8: begin
             end
             default: begin
-                cur_state <= SEND_CMD0;
+                transition_to(SEND_CMD0);
                 target_count <= 0;
                 cur_count <= 0;
                 executing <= 1'b1;
@@ -169,4 +165,10 @@ module sd_card_controller (
         p_execute_txrx <= execute_txrx_reg;
     end
 
+    task transition_to (input [4:0] next_state);
+        begin
+            cur_state <= next_state;
+            initialize_state <= 1'b1;
+        end
+    endtask
 endmodule
