@@ -120,8 +120,22 @@ module sd_card_controller (
                 transition_to(SEND_X_NO_OPS, SEND_CMD55);
             end
             SEND_CMD55: begin
+                send_cmd(
+                    CMD55,
+                    {32{1'b0}},
+                    7'h00,
+                    PROCESS_CMD55_RES
+                );
             end
             PROCESS_CMD55_RES: begin
+                cs_reg <= 1'b1;
+                target_count <= 4;
+                await_res <= 1'b0;
+                transition_to(SEND_X_NO_OPS, SEND_ACMD41);
+            end
+            SEND_ACMD41: begin
+            end
+            PROCESS_ACMD41_RES: begin
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);
