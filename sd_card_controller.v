@@ -21,13 +21,15 @@ module sd_card_controller (
     localparam [4:0] PROCESS_CMD0_RES = 5'h03;
     localparam [4:0] SEND_CMD8 = 5'h04;
     localparam [4:0] PROCESS_CMD8_RES = 5'h05;
-    localparam [4:0] SEND_ACMD41 = 5'h06;
-    localparam [4:0] PROCESS_ACMD41_RES = 5'h07;
+    localparam [4:0] SEND_CMD55 = 5'h06;
+    localparam [4:0] PROCESS_CMD55_RES = 5'h07;
+    localparam [4:0] SEND_ACMD41 = 5'h08;
+    localparam [4:0] PROCESS_ACMD41_RES = 5'h09;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
     localparam [5:0] CMD8 = 6'd8; // interface condition (expected voltage, etc)
-    localparam [5:0] CMD55 = 6'd55; // precedes app commands - may not be needed
+    localparam [5:0] CMD55 = 6'd55; // precedes app commands
     localparam [5:0] CMD58 = 6'd58; // read OCR, CCS bit assigned
 
     // SD app commands
@@ -155,6 +157,14 @@ module sd_card_controller (
                 end
             end
             PROCESS_CMD8_RES: begin
+                cs_reg <= 1'b1;
+                target_count <= 4;
+                await_res <= 1'b0;
+                transition_to(SEND_X_NO_OPS, SEND_CMD55);
+            end
+            SEND_CMD55: begin
+            end
+            PROCESS_CMD55_RES: begin
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);
