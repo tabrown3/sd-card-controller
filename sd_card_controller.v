@@ -60,6 +60,7 @@ module sd_card_controller (
     wire [7:0] rx_byte;
     wire [47:0] full_cmd;
     wire [5:0] cmd_ind;
+    wire [7:0] r1_res;
 
     wire execute_txrx = p_execute_txrx ^ execute_txrx_reg;
 
@@ -67,6 +68,7 @@ module sd_card_controller (
     assign full_cmd = {1'b0, 1'b1, cur_cmd, cur_args, cur_crc, 1'b1};
     assign tx_byte = send_no_op ? 8'hff : cmd_byte_buffer;
     assign cs = cs_reg;
+    assign r1_res = res_buffer[39:32];
 
     spi_controller SPI_CONT(
         .execute(execute_txrx),
@@ -146,7 +148,7 @@ module sd_card_controller (
             PROCESS_ACMD41_RES: begin
                 cs_reg <= 1'b1;
 
-                if (!res_buffer[7:0]) begin // when R1 is all 0's
+                if (!r1_res) begin // when R1 is all 0's
                     target_count <= 4;
                     await_res <= 1'b0;
                     transition_to(SEND_X_NO_OPS, SEND_CMD58); // move to next CMD
@@ -194,19 +196,27 @@ module sd_card_controller (
             end else begin
                 if (cur_count >= target_count) begin // once 80 blank bytes have been sent
                     if (txrx_finished) begin // once current sequence completes
+                        if (reading_res) begin
+                            res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+                        end
+
                         reading_res <= 1'b0;
                         transition_to(redirect_to, redirect_to);
                     end
                 end else if (txrx_finished) begin // once current sequence completes
+                    if (reading_res) begin
+                        res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+                    end
+
                     if (!rx_byte[7] && await_res && !reading_res) begin // if the card responded
                         reading_res <= 1'b1;
                         target_count <= 5;
                         cur_count <= 2; // skip the first byte since we already have it
+                        res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
                     end else begin // else keep sending no_ops
                         cur_count <= cur_count + 1; // increment count
                     end
 
-                    res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
                     execute_txrx_reg <= ~execute_txrx_reg; // start next txrx sequence
                 end
             end
