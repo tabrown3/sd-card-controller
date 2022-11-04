@@ -48,6 +48,8 @@ module sd_card_controller (
     reg [7:0] cmd_byte_buffer;
     reg cs_reg = 1'b1;
     reg await_res = 1'b0;
+    reg [39:0] res_buffer = {40{1'b0}};
+    reg reading_res = 1'b0;
     wire txrx_finished;
     wire txrx_busy;
     wire [7:0] tx_byte;
@@ -181,21 +183,27 @@ module sd_card_controller (
 
                 cur_count <= 0;
                 send_no_op <= 1'b1; // we're just running the clk, no cmd
+                reading_res <= 1'b0;
 
                 executing <= 1'b1; // let controllers know we're busy
                 execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
             end else begin
                 if (cur_count >= target_count) begin // once 80 blank bytes have been sent
                     if (txrx_finished) begin // once current sequence completes
+                        reading_res <= 1'b0;
                         transition_to(redirect_to, redirect_to);
                     end
                 end else if (txrx_finished) begin // once current sequence completes
-                    if (!rx_byte[7] && await_res) begin // if the card responded
-                        transition_to(redirect_to, redirect_to);
+                    if (!rx_byte[7] && await_res && !reading_res) begin // if the card responded
+                        reading_res <= 1'b1;
+                        target_count <= 5;
+                        cur_count <= 2; // skip the first byte since we already have it
                     end else begin // else keep sending no_ops
                         cur_count <= cur_count + 1; // increment count
-                        execute_txrx_reg <= ~execute_txrx_reg; // start next txrx sequence
                     end
+
+                    res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+                    execute_txrx_reg <= ~execute_txrx_reg; // start next txrx sequence
                 end
             end
         end
