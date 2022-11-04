@@ -145,9 +145,14 @@ module sd_card_controller (
             end
             PROCESS_ACMD41_RES: begin
                 cs_reg <= 1'b1;
-                target_count <= 4;
-                await_res <= 1'b0;
-                transition_to(SEND_X_NO_OPS, SEND_CMD58);
+
+                if (!res_buffer[7:0]) begin // when R1 is all 0's
+                    target_count <= 4;
+                    await_res <= 1'b0;
+                    transition_to(SEND_X_NO_OPS, SEND_CMD58); // move to next CMD
+                end else begin
+                    transition_to(SEND_X_NO_OPS, SEND_CMD55); // keep sending init CMDs
+                end
             end
             SEND_CMD58: begin
             end

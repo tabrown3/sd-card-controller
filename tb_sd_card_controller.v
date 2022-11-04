@@ -8,6 +8,7 @@ module tb_sd_card_controller();
     reg miso = 1'b0;
     reg [7:0] outgoing_byte = 8'h00;
     reg btn = 1'b1;
+    integer clk_cnt = 0;
     wire cs;
     wire [7:0] incoming_byte;
     wire mosi;
@@ -36,15 +37,23 @@ module tb_sd_card_controller();
     initial begin
         #50;
         btn = 1'b0;
-        #2000;
+        #4000;
         $stop;
     end
 
     always begin
         #0.5;
         clk = ~clk;
-        miso = $random;
         #0.5;
         clk = ~clk;
+    end
+
+    always @(negedge clk) begin
+        if (clk_cnt < 1600) begin
+            miso <= $random;
+        end else begin
+            miso <= 0;
+        end
+        clk_cnt <= clk_cnt + 1;
     end
 endmodule
