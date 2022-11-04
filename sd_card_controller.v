@@ -151,6 +151,8 @@ module sd_card_controller (
                     await_res <= 1'b0;
                     transition_to(SEND_X_NO_OPS, SEND_CMD58); // move to next CMD
                 end else begin
+                    target_count <= 80;
+                    await_res <= 1'b0;
                     transition_to(SEND_X_NO_OPS, SEND_CMD55); // keep sending init CMDs
                 end
             end
