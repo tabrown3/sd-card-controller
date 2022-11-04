@@ -25,6 +25,8 @@ module sd_card_controller (
     localparam [4:0] PROCESS_CMD55_RES = 5'h07;
     localparam [4:0] SEND_ACMD41 = 5'h08;
     localparam [4:0] PROCESS_ACMD41_RES = 5'h09;
+    localparam [4:0] SEND_CMD58 = 5'h0a;
+    localparam [4:0] PROCESS_CMD58_RES = 5'h0b;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
@@ -134,8 +136,22 @@ module sd_card_controller (
                 transition_to(SEND_X_NO_OPS, SEND_ACMD41);
             end
             SEND_ACMD41: begin
+                send_cmd(
+                    ACMD41,
+                    {2'b01, {30{1'b0}}}, // bit 30 is HCS, which we want - rest are 0
+                    7'h00,
+                    PROCESS_ACMD41_RES
+                );
             end
             PROCESS_ACMD41_RES: begin
+                cs_reg <= 1'b1;
+                target_count <= 4;
+                await_res <= 1'b0;
+                transition_to(SEND_X_NO_OPS, SEND_CMD58);
+            end
+            SEND_CMD58: begin
+            end
+            PROCESS_CMD58_RES: begin
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);
