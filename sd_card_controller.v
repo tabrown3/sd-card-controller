@@ -92,33 +92,12 @@ module sd_card_controller (
                 send_no_ops();
             end
             SEND_CMD0: begin
-                if (initialize_state) begin
-                    initialize_state <= 1'b0;
-
-                    target_count <= 6;
-                    cur_count <= 1;
-                    send_no_op <= 1'b0;
-
-                    cur_cmd <= CMD0;
-                    cur_args <= {32{1'b0}};
-                    cur_crc <= 7'h4a;
-                    cmd_byte_buffer <= {1'b0, 1'b1, CMD0};
-
-                    execute_txrx_reg <= ~execute_txrx_reg;
-                    cs_reg <= 1'b0;
-                end else begin
-                    if (cur_count >= target_count) begin
-                        if (txrx_finished) begin // once current sequence completes
-                            target_count <= 80;
-                            await_res <= 1'b1;
-                            transition_to(SEND_X_NO_OPS, PROCESS_CMD0_RES);
-                        end
-                    end else if (txrx_finished) begin
-                        cmd_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
-                        cur_count <= cur_count + 1; // increment count
-                        execute_txrx_reg <= ~execute_txrx_reg;
-                    end
-                end
+                send_cmd(
+                    CMD0,
+                    {32{1'b0}},
+                    7'h4a,
+                    PROCESS_CMD0_RES
+                );
             end
             PROCESS_CMD0_RES: begin
                 cs_reg <= 1'b1;
@@ -127,34 +106,12 @@ module sd_card_controller (
                 transition_to(SEND_X_NO_OPS, SEND_CMD8);
             end
             SEND_CMD8: begin
-                /*** DUPLICATED FROM SEND_CMD0 ***/
-                if (initialize_state) begin
-                    initialize_state <= 1'b0;
-
-                    target_count <= 6;
-                    cur_count <= 1;
-                    send_no_op <= 1'b0;
-
-                    cur_cmd <= CMD8;
-                    cur_args <= {{16{1'b0}}, 8'h01, 8'b10101010};
-                    cur_crc <= 7'b1000011;
-                    cmd_byte_buffer <= {1'b0, 1'b1, CMD8};
-
-                    execute_txrx_reg <= ~execute_txrx_reg;
-                    cs_reg <= 1'b0;
-                end else begin
-                    if (cur_count >= target_count) begin
-                        if (txrx_finished) begin // once current sequence completes
-                            target_count <= 80;
-                            await_res <= 1'b1;
-                            transition_to(SEND_X_NO_OPS, PROCESS_CMD8_RES);
-                        end
-                    end else if (txrx_finished) begin
-                        cmd_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
-                        cur_count <= cur_count + 1; // increment count
-                        execute_txrx_reg <= ~execute_txrx_reg;
-                    end
-                end
+                send_cmd(
+                    CMD8,
+                    {{16{1'b0}}, 8'h01, 8'b10101010},
+                    7'b1000011,
+                    PROCESS_CMD8_RES
+                );
             end
             PROCESS_CMD8_RES: begin
                 cs_reg <= 1'b1;
@@ -214,6 +171,43 @@ module sd_card_controller (
 
                     res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
                     execute_txrx_reg <= ~execute_txrx_reg; // start next txrx sequence
+                end
+            end
+        end
+    endtask
+
+    task send_cmd (
+        input [5:0] in_cmd,
+        input [31:0] in_args,
+        input [6:0] in_crc,
+        input [4:0] in_redirect_target
+    );
+        begin
+            if (initialize_state) begin
+                initialize_state <= 1'b0;
+
+                target_count <= 6;
+                cur_count <= 1;
+                send_no_op <= 1'b0;
+
+                cur_cmd <= in_cmd;
+                cur_args <= in_args;
+                cur_crc <= in_crc;
+                cmd_byte_buffer <= {1'b0, 1'b1, in_cmd};
+
+                execute_txrx_reg <= ~execute_txrx_reg;
+                cs_reg <= 1'b0;
+            end else begin
+                if (cur_count >= target_count) begin
+                    if (txrx_finished) begin // once current sequence completes
+                        target_count <= 80;
+                        await_res <= 1'b1;
+                        transition_to(SEND_X_NO_OPS, in_redirect_target);
+                    end
+                end else if (txrx_finished) begin
+                    cmd_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
+                    cur_count <= cur_count + 1; // increment count
+                    execute_txrx_reg <= ~execute_txrx_reg;
                 end
             end
         end
