@@ -117,14 +117,10 @@ module sd_card_controller (
                 end
             end
             PROCESS_CMD0_RES: begin
-                // if (!rx_byte[7] && rx_byte[0]) begin // if success response
-                    cs_reg <= 1'b1;
-                    target_count <= 4;
-                    await_res <= 1'b0;
-                    transition_to(SEND_X_NO_OPS, SEND_CMD8);
-                // end else begin
-                //     transition_to(UNINITIALIZED, UNINITIALIZED);
-                // end
+                cs_reg <= 1'b1;
+                target_count <= 4;
+                await_res <= 1'b0;
+                transition_to(SEND_X_NO_OPS, SEND_CMD8);
             end
             SEND_CMD8: begin
                 /*** DUPLICATED FROM SEND_CMD0 ***/
