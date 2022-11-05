@@ -10,7 +10,7 @@ module sd_card_controller (
     output reg [7:0] incoming_byte, // holds byte being read
     output mosi,
     output finished_byte, // indicates a byte has been written or read
-    output reg finished_block = 1'b0, // indicates the op is finished
+    output finished_block, // indicates the op is finished
     output spi_clk,
     output busy
 );
@@ -60,6 +60,10 @@ module sd_card_controller (
     reg await_res = 1'b0;
     reg [39:0] res_buffer = {40{1'b0}};
     reg reading_res = 1'b0;
+    reg finished_byte_reg = 1'b0;
+    reg p_finished_byte = 1'b0;
+    reg finished_block_reg = 1'b0;
+    reg p_finished_block = 1'b0;
     wire txrx_finished;
     wire txrx_busy;
     wire [7:0] tx_byte;
@@ -75,7 +79,8 @@ module sd_card_controller (
     assign tx_byte = send_no_op ? 8'hff : cmd_byte_buffer;
     assign cs = cs_reg;
     assign r1_res = res_buffer[39:32];
-    assign finished_byte = reading_res & txrx_finished;
+    assign finished_byte = p_finished_byte ^ finished_byte_reg;
+    assign finished_block = p_finished_block ^ finished_block_reg;
 
     spi_controller SPI_CONT(
         .execute(execute_txrx),
@@ -231,6 +236,8 @@ module sd_card_controller (
         endcase
 
         p_execute_txrx <= execute_txrx_reg;
+        p_finished_byte <= finished_byte_reg;
+        p_finished_block <= finished_block_reg;
     end
 
     task transition_to (input [4:0] transition_target, input [4:0] redirect_target);
@@ -266,6 +273,10 @@ module sd_card_controller (
                 if (cur_count >= blank_target_count || (reading_res && cur_count >= res_target_count)) begin
                     if (txrx_finished) begin // once current sequence completes
                         if (reading_res) begin
+                            if (is_read_token) begin
+                                finished_block_reg <= ~finished_block_reg;
+                            end
+                            
                             store_rx_byte(is_read_token);
                         end
 
@@ -333,6 +344,7 @@ module sd_card_controller (
     task store_rx_byte(input is_read_token);
         begin
             if (is_read_token) begin
+                finished_byte_reg <= ~finished_byte_reg;
                 incoming_byte <= rx_byte;
             end else begin
                 res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
