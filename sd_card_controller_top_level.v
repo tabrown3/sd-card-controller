@@ -73,7 +73,7 @@ input 		     [1:0]		bottom_IN;
 
 reg op_code = 1'b0;
 reg execute = 1'b0;
-reg [25:0] block_address = {26{1'b0}};
+reg [31:0] block_address = {32{1'b0}};
 reg [7:0] outgoing_byte = 8'h00;
 wire clk;
 wire [7:0] incoming_byte;

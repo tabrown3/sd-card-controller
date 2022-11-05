@@ -210,7 +210,7 @@ module sd_card_controller (
             SEND_CMD17: begin // READ
                 send_cmd(
                     CMD17,
-                    {32{1'b0}},
+                    block_address,
                     7'h00,
                     PROCESS_CMD17_RES
                 );
@@ -276,7 +276,7 @@ module sd_card_controller (
                             if (is_read_token) begin
                                 finished_block_reg <= ~finished_block_reg;
                             end
-                            
+
                             store_rx_byte(is_read_token);
                         end
 
