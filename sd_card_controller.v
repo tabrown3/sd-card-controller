@@ -7,9 +7,9 @@ module sd_card_controller (
     input [7:0] outgoing_byte, // byte to write
     input btn,
     output cs, // chip select
-    output [7:0] incoming_byte, // holds byte being read
+    output reg [7:0] incoming_byte, // holds byte being read
     output mosi,
-    output reg finished_byte = 1'b0, // indicates a byte has been written or read
+    output finished_byte, // indicates a byte has been written or read
     output reg finished_block = 1'b0, // indicates the op is finished
     output spi_clk,
     output busy
@@ -31,7 +31,8 @@ module sd_card_controller (
     localparam [4:0] READY_AND_WAITING = 5'h0d;
     localparam [4:0] SEND_CMD17 = 5'h0e;
     localparam [4:0] PROCESS_CMD17_RES = 5'h0f;
-    localparam [4:0] FAKE_STATE = 5'h10;
+    localparam [4:0] PROCESS_READ_TOKEN = 5'h10;
+    localparam [4:0] FAKE_STATE = 5'h11;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
@@ -75,6 +76,7 @@ module sd_card_controller (
     assign tx_byte = send_no_op ? 8'hff : cmd_byte_buffer;
     assign cs = cs_reg;
     assign r1_res = res_buffer[39:32];
+    assign finished_byte = reading_res & txrx_finished;
 
     spi_controller SPI_CONT(
         .execute(execute_txrx),
@@ -99,7 +101,12 @@ module sd_card_controller (
                 end
             end
             SEND_X_NO_OPS: begin
-                send_no_ops(target_count, 5);
+                send_no_ops(
+                    target_count,
+                    5,
+                    rx_byte == 8'h01 || rx_byte == 8'h00,
+                    1'b0
+                );
             end
             SEND_CMD0: begin
                 send_cmd(
@@ -201,14 +208,23 @@ module sd_card_controller (
                     CMD17,
                     {32{1'b0}},
                     7'h00,
-                    PROCESS_CMD17_RES
+                    PROCESS_READ_TOKEN
                 );
             end
-            PROCESS_CMD17_RES: begin
-                cs_reg <= 1'b0; // TODO: CHANGE THIS BACK TO 1'b1
-                target_count <= 1000;
-                await_res <= 1'b0;
-                transition_to(SEND_X_NO_OPS, FAKE_STATE);
+            // PROCESS_CMD17_RES: begin
+            //     cs_reg <= 1'b0; // TODO: CHANGE THIS BACK TO 1'b1
+            //     target_count <= 1000;
+            //     await_res <= 1'b0;
+            //     transition_to(SEND_X_NO_OPS, PROCESS_READ_TOKEN);
+            // end
+            PROCESS_READ_TOKEN: begin
+                redirect_to <= FAKE_STATE;
+                send_no_ops(
+                    1000,
+                    515,
+                    rx_byte == 8'hfe,
+                    1'b1
+                );
             end
             FAKE_STATE: begin
             end
@@ -234,7 +250,9 @@ module sd_card_controller (
 
     task send_no_ops (
         input integer blank_target_count,
-        input integer res_target_count
+        input integer res_target_count,
+        input is_first_res_byte,
+        input is_read_token
     );
         begin
             if (initialize_state) begin
@@ -247,10 +265,14 @@ module sd_card_controller (
                 executing <= 1'b1; // let controllers know we're busy
                 execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
             end else begin
-                if (cur_count >= blank_target_count) begin // once 80 blank bytes have been sent
+                if (cur_count >= blank_target_count || (reading_res && cur_count >= res_target_count)) begin // once 80 blank bytes have been sent
                     if (txrx_finished) begin // once current sequence completes
                         if (reading_res) begin
-                            res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+                            if (is_read_token) begin
+                                incoming_byte <= rx_byte;
+                            end else begin
+                                res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+                            end
                         end
 
                         reading_res <= 1'b0;
@@ -258,14 +280,23 @@ module sd_card_controller (
                     end
                 end else if (txrx_finished) begin // once current sequence completes
                     if (reading_res) begin
-                        res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+                        if (is_read_token) begin
+                            incoming_byte <= rx_byte;
+                        end else begin
+                            res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+                        end
                     end
 
-                    if (!rx_byte[7] && await_res && !reading_res) begin // if the card responded
+                    if (is_first_res_byte && await_res && !reading_res) begin // if the card responded
                         reading_res <= 1'b1;
                         target_count <= res_target_count;
                         cur_count <= 2; // skip the first byte since we already have it
-                        res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+
+                        if (is_read_token) begin
+                            incoming_byte <= rx_byte;
+                        end else begin
+                            res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
+                        end
                     end else begin // else keep sending no_ops
                         cur_count <= cur_count + 1; // increment count
                     end
