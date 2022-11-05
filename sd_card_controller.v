@@ -29,10 +29,13 @@ module sd_card_controller (
     localparam [4:0] PROCESS_CMD58_RES = 5'h0b;
     localparam [4:0] FINISH_INIT = 5'h0c;
     localparam [4:0] READY_AND_WAITING = 5'h0d;
+    localparam [4:0] SEND_CMD17 = 5'h0e;
+    localparam [4:0] PROCESS_CMD17_RES = 5'h0f;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
     localparam [5:0] CMD8 = 6'd8; // interface condition (expected voltage, etc)
+    localparam [5:0] CMD17 = 6'd17; // read single block
     localparam [5:0] CMD55 = 6'd55; // precedes app commands
     localparam [5:0] CMD58 = 6'd58; // read OCR, CCS bit assigned
 
@@ -181,13 +184,30 @@ module sd_card_controller (
                 transition_to(SEND_X_NO_OPS, READY_AND_WAITING);
             end
             READY_AND_WAITING: begin
-                if (executing) begin
+                if (execute && !executing) begin
+                    executing <= 1'b1;
+
+                    if (op_code) begin // WRITE
+                    end else begin // READ
+                        transition_to(SEND_CMD17, SEND_CMD17);
+                    end
+                end else if (executing) begin
                     executing <= 1'b0;
                 end
-                
-                if (op_code) begin // WRITE
-                end else begin // READ
-                end
+            end
+            SEND_CMD17: begin // READ
+                send_cmd(
+                    CMD17,
+                    {32{1'b0}},
+                    7'h00,
+                    PROCESS_CMD17_RES
+                );
+            end
+            PROCESS_CMD17_RES: begin
+                cs_reg <= 1'b1;
+                target_count <= 4;
+                await_res <= 1'b0;
+                transition_to(SEND_X_NO_OPS, READY_AND_WAITING);
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);

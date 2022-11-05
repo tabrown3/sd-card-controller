@@ -73,12 +73,12 @@ input 		     [1:0]		bottom_IN;
 
 reg op_code = 1'b0;
 reg execute = 1'b0;
-reg [25:0] sector_address = {26{1'b0}};
+reg [25:0] block_address = {26{1'b0}};
 reg [7:0] outgoing_byte = 8'h00;
 wire clk;
 wire [7:0] incoming_byte;
 wire finished_byte;
-wire finished_sector;
+wire finished_block;
 wire busy;
 wire debug_clk;
 wire miso;
@@ -100,7 +100,7 @@ sd_card_controller SDCC0 (
     .op_code(op_code),
     .execute(execute),
     .clk(clk),
-    .sector_address(sector_address),
+    .block_address(block_address),
     .miso(miso), // weak pull-up enabled
     .outgoing_byte(outgoing_byte),
 	.btn(KEY[0]),
@@ -108,7 +108,7 @@ sd_card_controller SDCC0 (
     .incoming_byte(incoming_byte),
     .mosi(bottom[1]),
     .finished_byte(finished_byte),
-    .finished_sector(finished_sector),
+    .finished_block(finished_block),
     .spi_clk(bottom[3]),
     .busy(busy)
 );
