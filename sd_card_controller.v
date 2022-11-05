@@ -266,11 +266,7 @@ module sd_card_controller (
                 if (cur_count >= blank_target_count || (reading_res && cur_count >= res_target_count)) begin
                     if (txrx_finished) begin // once current sequence completes
                         if (reading_res) begin
-                            if (is_read_token) begin
-                                incoming_byte <= rx_byte;
-                            end else begin
-                                res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
-                            end
+                            store_rx_byte(is_read_token);
                         end
 
                         reading_res <= 1'b0;
@@ -278,11 +274,7 @@ module sd_card_controller (
                     end
                 end else if (txrx_finished) begin // once current sequence completes
                     if (reading_res) begin
-                        if (is_read_token) begin
-                            incoming_byte <= rx_byte;
-                        end else begin
-                            res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
-                        end
+                        store_rx_byte(is_read_token);
                     end
 
                     if (is_first_res_byte && await_res && !reading_res) begin // if the card responded
@@ -290,11 +282,7 @@ module sd_card_controller (
                         target_count <= res_target_count;
                         cur_count <= 2; // skip the first byte since we already have it
 
-                        if (is_read_token) begin
-                            incoming_byte <= rx_byte;
-                        end else begin
-                            res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
-                        end
+                        store_rx_byte(is_read_token);
                     end else begin // else keep sending no_ops
                         cur_count <= cur_count + 1; // increment count
                     end
@@ -338,6 +326,16 @@ module sd_card_controller (
                     cur_count <= cur_count + 1; // increment count
                     execute_txrx_reg <= ~execute_txrx_reg;
                 end
+            end
+        end
+    endtask
+
+    task store_rx_byte(input is_read_token);
+        begin
+            if (is_read_token) begin
+                incoming_byte <= rx_byte;
+            end else begin
+                res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
             end
         end
     endtask
