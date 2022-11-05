@@ -242,10 +242,10 @@ module sd_card_controller (
     endtask
 
     task send_no_ops (
-        input integer blank_target_count,
-        input integer res_target_count,
-        input is_first_res_byte,
-        input is_read_token
+        input integer blank_target_count, // target count when not awaiting res, or until res is read
+        input integer res_target_count, // target count after res is read (if ever)
+        input is_first_res_byte, // this is the result of a res identifying expression
+        input is_read_token // this flag indicates that we're waiting for a read token (as opposed to an R1, R3, etc)
     );
         begin
             if (initialize_state) begin
@@ -258,7 +258,12 @@ module sd_card_controller (
                 executing <= 1'b1; // let controllers know we're busy
                 execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
             end else begin
-                if (cur_count >= blank_target_count || (reading_res && cur_count >= res_target_count)) begin // once 80 blank bytes have been sent
+                // If await_res is 0, blank_target_count is the number of no-op clk bytes to send
+                // If await_res is 1, blank_target_count is a sort of timeout leading up to the
+                //  the expected response. Once the expecte response is identified, reading_res
+                //  becomes 1 and res_target_count replaces blank_target_count as the terminating
+                //  count.
+                if (cur_count >= blank_target_count || (reading_res && cur_count >= res_target_count)) begin
                     if (txrx_finished) begin // once current sequence completes
                         if (reading_res) begin
                             if (is_read_token) begin
