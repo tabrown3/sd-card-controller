@@ -4,7 +4,7 @@ module tb_sd_card_controller();
     reg op_code = 1'b0;
     reg execute = 1'b0;
     reg clk = 1'b1;
-    reg [31:0] sector_address = {32{1'b0}};
+    reg [31:0] block_address = {32{1'b0}};
     reg miso = 1'b0;
     reg [7:0] outgoing_byte = 8'h00;
     reg btn = 1'b1;
@@ -13,7 +13,7 @@ module tb_sd_card_controller();
     wire [7:0] incoming_byte;
     wire mosi;
     wire finished_byte;
-    wire finished_sector;
+    wire finished_block;
     wire spi_clk;
     wire busy;
 
@@ -21,7 +21,7 @@ module tb_sd_card_controller();
         .op_code(op_code),
         .execute(execute),
         .clk(clk),
-        .address(address),
+        .block_address(block_address),
         .miso(miso),
         .outgoing_byte(outgoing_byte),
         .btn(btn),
@@ -29,7 +29,7 @@ module tb_sd_card_controller();
         .incoming_byte(incoming_byte),
         .mosi(mosi),
         .finished_byte(finished_byte),
-        .finished_sector(finished_sector),
+        .finished_block(finished_block),
         .spi_clk(spi_clk),
         .busy(busy)
     );

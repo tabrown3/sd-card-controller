@@ -2,7 +2,7 @@ module sd_card_controller (
     input op_code, // 1'b0 for READ, 1'b1 for WRITE
     input execute, // on execute, perform op
     input clk, // master clk
-    input [31:0] address,
+    input [31:0] block_address,
     input miso,
     input [7:0] outgoing_byte, // byte to write
     input btn,
@@ -10,7 +10,7 @@ module sd_card_controller (
     output [7:0] incoming_byte, // holds byte being read
     output mosi,
     output reg finished_byte = 1'b0, // indicates a byte has been written or read
-    output reg finished_sector = 1'b0, // indicates the op is finished
+    output reg finished_block = 1'b0, // indicates the op is finished
     output spi_clk,
     output busy
 );
