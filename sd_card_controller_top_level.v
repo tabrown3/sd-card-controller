@@ -98,7 +98,7 @@ sd_card_pll PLL0(
 
 sd_card_controller SDCC0 (
     .op_code(op_code),
-    .execute(execute),
+    .execute(!KEY[1]),
     .clk(clk),
     .block_address(block_address),
     .miso(miso), // weak pull-up enabled
