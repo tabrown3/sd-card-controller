@@ -4,7 +4,7 @@ module tb_sd_card_controller();
     reg op_code = 1'b0;
     reg execute = 1'b0;
     reg clk = 1'b1;
-    reg [25:0] sector_address = {26{1'b0}};
+    reg [31:0] sector_address = {32{1'b0}};
     reg miso = 1'b0;
     reg [7:0] outgoing_byte = 8'h00;
     reg btn = 1'b1;
@@ -21,7 +21,7 @@ module tb_sd_card_controller();
         .op_code(op_code),
         .execute(execute),
         .clk(clk),
-        .sector_address(sector_address),
+        .address(address),
         .miso(miso),
         .outgoing_byte(outgoing_byte),
         .btn(btn),

@@ -2,7 +2,7 @@ module sd_card_controller (
     input op_code, // 1'b0 for READ, 1'b1 for WRITE
     input execute, // on execute, perform op
     input clk, // master clk
-    input [25:0] sector_address, // multiply this by 512 to get byte address
+    input [31:0] address,
     input miso,
     input [7:0] outgoing_byte, // byte to write
     input btn,
@@ -181,8 +181,13 @@ module sd_card_controller (
                 transition_to(SEND_X_NO_OPS, READY_AND_WAITING);
             end
             READY_AND_WAITING: begin
-                executing <= 1'b0;
-                // Listen for read/write commands
+                if (executing) begin
+                    executing <= 1'b0;
+                end
+                
+                if (op_code) begin // WRITE
+                end else begin // READ
+                end
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);
