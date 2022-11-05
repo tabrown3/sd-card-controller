@@ -37,7 +37,7 @@ module tb_sd_card_controller();
     initial begin
         #50;
         btn = 1'b0;
-        #4000;
+        #20000;
         $stop;
     end
 
@@ -49,11 +49,18 @@ module tb_sd_card_controller();
     end
 
     always @(negedge clk) begin
-        if (clk_cnt < 1600) begin
+        if (clk_cnt < 4450 || clk_cnt > 4920) begin
             miso <= $random;
         end else begin
             miso <= 0;
         end
+
+        if (clk_cnt == 5870) begin
+            execute <= 1'b1;
+        end else begin
+            execute <= 1'b0;
+        end
+
         clk_cnt <= clk_cnt + 1;
     end
 endmodule

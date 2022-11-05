@@ -99,7 +99,7 @@ module sd_card_controller (
                 end
             end
             SEND_X_NO_OPS: begin
-                send_no_ops();
+                send_no_ops(target_count, 5);
             end
             SEND_CMD0: begin
                 send_cmd(
@@ -232,7 +232,10 @@ module sd_card_controller (
         end
     endtask
 
-    task send_no_ops ();
+    task send_no_ops (
+        input integer blank_target_count,
+        input integer res_target_count
+    );
         begin
             if (initialize_state) begin
                 initialize_state <= 1'b0;
@@ -244,7 +247,7 @@ module sd_card_controller (
                 executing <= 1'b1; // let controllers know we're busy
                 execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
             end else begin
-                if (cur_count >= target_count) begin // once 80 blank bytes have been sent
+                if (cur_count >= blank_target_count) begin // once 80 blank bytes have been sent
                     if (txrx_finished) begin // once current sequence completes
                         if (reading_res) begin
                             res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
@@ -260,7 +263,7 @@ module sd_card_controller (
 
                     if (!rx_byte[7] && await_res && !reading_res) begin // if the card responded
                         reading_res <= 1'b1;
-                        target_count <= 5;
+                        target_count <= res_target_count;
                         cur_count <= 2; // skip the first byte since we already have it
                         res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
                     end else begin // else keep sending no_ops
