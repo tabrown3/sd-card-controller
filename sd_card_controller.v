@@ -27,6 +27,8 @@ module sd_card_controller (
     localparam [4:0] PROCESS_ACMD41_RES = 5'h09;
     localparam [4:0] SEND_CMD58 = 5'h0a;
     localparam [4:0] PROCESS_CMD58_RES = 5'h0b;
+    localparam [4:0] FINISH_INIT = 5'h0c;
+    localparam [4:0] READY_AND_WAITING = 5'h0d;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
@@ -159,8 +161,28 @@ module sd_card_controller (
                 end
             end
             SEND_CMD58: begin
+                send_cmd(
+                    CMD58,
+                    {32{1'b0}},
+                    7'h00,
+                    PROCESS_CMD58_RES
+                );
             end
             PROCESS_CMD58_RES: begin
+                cs_reg <= 1'b1;
+                target_count <= 4;
+                await_res <= 1'b0;
+                transition_to(SEND_X_NO_OPS, FINISH_INIT);
+            end
+            FINISH_INIT: begin // TODO: Is FINISH_INIT needed?
+                cs_reg <= 1'b1;
+                target_count <= 4;
+                await_res <= 1'b0;
+                transition_to(SEND_X_NO_OPS, READY_AND_WAITING);
+            end
+            READY_AND_WAITING: begin
+                executing <= 1'b0;
+                // Listen for read/write commands
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);
