@@ -31,8 +31,7 @@ module sd_card_controller (
     localparam [4:0] READY_AND_WAITING = 5'h0d;
     localparam [4:0] SEND_CMD17 = 5'h0e;
     localparam [4:0] PROCESS_CMD17_RES = 5'h0f;
-    localparam [4:0] PROCESS_READ_TOKEN = 5'h10;
-    localparam [4:0] FAKE_STATE = 5'h11;
+    localparam [4:0] FAKE_STATE = 5'h10;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
@@ -208,16 +207,10 @@ module sd_card_controller (
                     CMD17,
                     {32{1'b0}},
                     7'h00,
-                    PROCESS_READ_TOKEN
+                    PROCESS_CMD17_RES
                 );
             end
-            // PROCESS_CMD17_RES: begin
-            //     cs_reg <= 1'b0; // TODO: CHANGE THIS BACK TO 1'b1
-            //     target_count <= 1000;
-            //     await_res <= 1'b0;
-            //     transition_to(SEND_X_NO_OPS, PROCESS_READ_TOKEN);
-            // end
-            PROCESS_READ_TOKEN: begin
+            PROCESS_CMD17_RES: begin
                 redirect_to <= FAKE_STATE;
                 send_no_ops(
                     1000,
