@@ -255,12 +255,12 @@ module sd_card_controller (
                     send_no_op <= 1'b0;
 
                     out_byte_buffer <= 8'hfe;
-                    is_first_cmd_byte <= 1'b0;
+                    is_first_cmd_byte <= 1'b0; // cmd24 starts its own first execution below
 
                     execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
                     cs_reg <= 1'b0;
                 end else begin
-                    stream_bytes(outgoing_byte, 1'b0, READY_AND_WAITING);
+                    stream_bytes(outgoing_byte, 1'b1, 1'b0, READY_AND_WAITING);
                 end
             end
             TERMINAL_STATE: begin
@@ -343,13 +343,17 @@ module sd_card_controller (
         end
     endtask
 
-    task stream_bytes (input [7:0] next_byte, input in_await_res, input [4:0] in_redirect_target);
+    task stream_bytes (input [7:0] next_byte, input broadcast_finish, input in_await_res, input [4:0] in_redirect_target);
         begin
             if (cur_count >= target_count) begin
                 if (txrx_finished) begin // once current sequence completes
                     target_count <= 80;
-                    finished_byte_reg <= ~finished_byte_reg;
-                    finished_block_reg <= ~finished_block_reg;
+
+                    if (broadcast_finish) begin
+                        finished_byte_reg <= ~finished_byte_reg;
+                        finished_block_reg <= ~finished_block_reg;
+                    end
+                    
                     await_res <= in_await_res;
                     transition_to(SEND_X_NO_OPS, in_redirect_target);
                 end
@@ -357,7 +361,10 @@ module sd_card_controller (
                 is_first_cmd_byte <= 1'b0;
                 out_byte_buffer <= next_byte;
                 cur_count <= cur_count + 1; // increment count
-                finished_byte_reg <= ~finished_byte_reg;
+
+                if (broadcast_finish) begin
+                    finished_byte_reg <= ~finished_byte_reg;
+                end
 
                 execute_txrx_reg <= ~execute_txrx_reg;
             end
@@ -388,7 +395,7 @@ module sd_card_controller (
 
                 cs_reg <= 1'b0;
             end else begin
-                stream_bytes(next_byte, 1'b1, in_redirect_target);
+                stream_bytes(next_byte, 1'b0, 1'b1, in_redirect_target);
             end
         end
     endtask
