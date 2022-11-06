@@ -31,12 +31,15 @@ module sd_card_controller (
     localparam [4:0] READY_AND_WAITING = 5'h0d;
     localparam [4:0] SEND_CMD17 = 5'h0e;
     localparam [4:0] PROCESS_CMD17_RES = 5'h0f;
-    localparam [4:0] FAKE_STATE = 5'h10;
+    localparam [4:0] SEND_CMD24 = 5'h10;
+    localparam [4:0] PROCESS_CMD24_RES = 5'h11;
+    localparam [4:0] TERMINAL_STATE = 5'h12;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
     localparam [5:0] CMD8 = 6'd8; // interface condition (expected voltage, etc)
     localparam [5:0] CMD17 = 6'd17; // read single block
+    localparam [5:0] CMD24 = 6'd24; // write single block
     localparam [5:0] CMD55 = 6'd55; // precedes app commands
     localparam [5:0] CMD58 = 6'd58; // read OCR, CCS bit assigned
 
@@ -55,7 +58,7 @@ module sd_card_controller (
     reg [6:0] cur_crc;
     reg initialize_state = 1'b0;
     reg send_no_op = 1'b0;
-    reg [7:0] cmd_byte_buffer;
+    reg [7:0] out_byte_buffer;
     reg cs_reg = 1'b1;
     reg await_res = 1'b0;
     reg [39:0] res_buffer = {40{1'b0}};
@@ -76,7 +79,7 @@ module sd_card_controller (
 
     assign busy = executing;
     assign full_cmd = {1'b0, 1'b1, cur_cmd, cur_args, cur_crc, 1'b1};
-    assign tx_byte = send_no_op ? 8'hff : cmd_byte_buffer;
+    assign tx_byte = send_no_op ? 8'hff : out_byte_buffer;
     assign cs = cs_reg;
     assign r1_res = res_buffer[39:32];
     assign finished_byte = p_finished_byte ^ finished_byte_reg;
@@ -200,11 +203,13 @@ module sd_card_controller (
                     executing <= 1'b1;
 
                     if (op_code) begin // WRITE
+                        transition_to(SEND_CMD24, SEND_CMD24);
                     end else begin // READ
                         transition_to(SEND_CMD17, SEND_CMD17);
                     end
                 end else if (executing) begin
                     executing <= 1'b0;
+                    cs_reg <= 1'b1;
                 end
             end
             SEND_CMD17: begin // READ
@@ -216,7 +221,7 @@ module sd_card_controller (
                 );
             end
             PROCESS_CMD17_RES: begin
-                redirect_to <= FAKE_STATE;
+                redirect_to <= READY_AND_WAITING;
                 send_no_ops(
                     1000,
                     515,
@@ -224,7 +229,44 @@ module sd_card_controller (
                     1'b1
                 );
             end
-            FAKE_STATE: begin
+            SEND_CMD24: begin
+                send_cmd(
+                    CMD24,
+                    block_address,
+                    7'h00,
+                    PROCESS_CMD24_RES
+                );
+            end
+            PROCESS_CMD24_RES: begin
+                if (initialize_state) begin
+                    initialize_state <= 1'b0;
+
+                    target_count <= 513;
+                    cur_count <= 1;
+                    out_byte_buffer <= 8'hfe;
+                    send_no_op <= 1'b0;
+
+                    execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
+                    cs_reg <= 1'b0;
+                end else begin
+                    if (cur_count >= target_count) begin
+                        if (txrx_finished) begin // once current sequence completes
+                            target_count <= 80;
+                            finished_byte_reg <= ~finished_byte_reg;
+                            finished_block_reg <= ~finished_block_reg;
+                            await_res <= 1'b0;
+                            transition_to(SEND_X_NO_OPS, READY_AND_WAITING);
+                        end
+                    end else if (txrx_finished) begin
+                        out_byte_buffer <= outgoing_byte;
+                        cur_count <= cur_count + 1; // increment count
+                        finished_byte_reg <= ~finished_byte_reg;
+
+                        execute_txrx_reg <= ~execute_txrx_reg;
+                    end
+                end
+            end
+            TERMINAL_STATE: begin
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);
@@ -321,7 +363,7 @@ module sd_card_controller (
                 cur_cmd <= in_cmd;
                 cur_args <= in_args;
                 cur_crc <= in_crc;
-                cmd_byte_buffer <= {1'b0, 1'b1, in_cmd};
+                out_byte_buffer <= {1'b0, 1'b1, in_cmd};
 
                 execute_txrx_reg <= ~execute_txrx_reg;
                 cs_reg <= 1'b0;
@@ -333,7 +375,7 @@ module sd_card_controller (
                         transition_to(SEND_X_NO_OPS, in_redirect_target);
                     end
                 end else if (txrx_finished) begin
-                    cmd_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
+                    out_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
                     cur_count <= cur_count + 1; // increment count
                     execute_txrx_reg <= ~execute_txrx_reg;
                 end

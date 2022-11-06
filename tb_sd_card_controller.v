@@ -6,7 +6,7 @@ module tb_sd_card_controller();
     reg clk = 1'b1;
     reg [31:0] block_address = {32{1'b0}};
     reg miso = 1'b0;
-    reg [7:0] outgoing_byte = 8'h00;
+    reg [7:0] outgoing_byte = 8'haa;
     reg btn = 1'b1;
     integer clk_cnt = 0;
     wire cs;
@@ -59,6 +59,9 @@ module tb_sd_card_controller();
 
         if (clk_cnt == 5870) begin
             execute <= 1'b1;
+        end else if (clk_cnt == 11850) begin
+            execute <= 1'b1;
+            op_code <= 1'b1;
         end else begin
             execute <= 1'b0;
         end
