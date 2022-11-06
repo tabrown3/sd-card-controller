@@ -74,7 +74,8 @@ input 		     [1:0]		bottom_IN;
 reg op_code = 1'b0;
 reg execute = 1'b0;
 reg [31:0] block_address = {32{1'b0}};
-reg [7:0] outgoing_byte = 8'h00;
+reg [7:0] outgoing_byte = 8'haa;
+reg prev_btn = 1'b0;
 wire clk;
 wire [7:0] incoming_byte;
 wire finished_byte;
@@ -89,6 +90,11 @@ wire miso;
 
 assign miso = bottom[5];
 assign bottom[5] = 1'bz;
+wire btn = !KEY[1];
+
+always @(negedge clk) begin
+	prev_btn <= btn;
+end
 
 sd_card_pll PLL0(
     .inclk0(CLOCK_50),
@@ -97,8 +103,8 @@ sd_card_pll PLL0(
 );
 
 sd_card_controller SDCC0 (
-    .op_code(op_code),
-    .execute(!KEY[1]),
+    .op_code(SW[0]),
+    .execute(btn && btn != prev_btn),
     .clk(clk),
     .block_address(block_address),
     .miso(miso), // weak pull-up enabled
