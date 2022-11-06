@@ -77,6 +77,7 @@ module sd_card_controller (
     wire [7:0] r1_res;
 
     wire execute_txrx = p_execute_txrx ^ execute_txrx_reg;
+    wire [7:0] cmd_next_byte = full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
 
     assign busy = executing;
     assign full_cmd = {1'b0, 1'b1, cur_cmd, cur_args, cur_crc, 1'b1};
@@ -121,6 +122,7 @@ module sd_card_controller (
                     CMD0,
                     {32{1'b0}},
                     7'h4a,
+                    cmd_next_byte,
                     PROCESS_CMD0_RES
                 );
             end
@@ -135,6 +137,7 @@ module sd_card_controller (
                     CMD8,
                     {{16{1'b0}}, 8'h01, 8'b10101010},
                     7'b1000011,
+                    cmd_next_byte,
                     PROCESS_CMD8_RES
                 );
             end
@@ -149,6 +152,7 @@ module sd_card_controller (
                     CMD55,
                     {32{1'b0}},
                     7'h00,
+                    cmd_next_byte,
                     PROCESS_CMD55_RES
                 );
             end
@@ -163,6 +167,7 @@ module sd_card_controller (
                     ACMD41,
                     {2'b01, {30{1'b0}}}, // bit 30 is HCS, which we want - rest are 0
                     7'h00,
+                    cmd_next_byte,
                     PROCESS_ACMD41_RES
                 );
             end
@@ -184,6 +189,7 @@ module sd_card_controller (
                     CMD58,
                     {32{1'b0}},
                     7'h00,
+                    cmd_next_byte,
                     PROCESS_CMD58_RES
                 );
             end
@@ -218,6 +224,7 @@ module sd_card_controller (
                     CMD17,
                     block_address,
                     7'h00,
+                    cmd_next_byte,
                     PROCESS_CMD17_RES
                 );
             end
@@ -235,6 +242,7 @@ module sd_card_controller (
                     CMD24,
                     block_address,
                     7'h00,
+                    cmd_next_byte,
                     PROCESS_CMD24_RES
                 );
             end
@@ -244,8 +252,10 @@ module sd_card_controller (
 
                     target_count <= 513;
                     cur_count <= 1;
-                    out_byte_buffer <= 8'hfe;
                     send_no_op <= 1'b0;
+
+                    out_byte_buffer <= 8'hfe;
+                    is_first_cmd_byte <= 1'b1;
 
                     execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
                     cs_reg <= 1'b0;
@@ -347,10 +357,32 @@ module sd_card_controller (
         end
     endtask
 
+    task stream_bytes (input [7:0] next_byte, input in_await_res, input [4:0] in_redirect_target);
+        begin
+            if (cur_count >= target_count) begin
+                if (txrx_finished) begin // once current sequence completes
+                    target_count <= 80;
+                    finished_byte_reg <= ~finished_byte_reg;
+                    finished_block_reg <= ~finished_block_reg;
+                    await_res <= in_await_res;
+                    transition_to(SEND_X_NO_OPS, in_redirect_target);
+                end
+            end else if (txrx_finished || is_first_cmd_byte) begin
+                is_first_cmd_byte <= 1'b0;
+                out_byte_buffer <= next_byte;
+                cur_count <= cur_count + 1; // increment count
+                finished_byte_reg <= ~finished_byte_reg;
+
+                execute_txrx_reg <= ~execute_txrx_reg;
+            end
+        end
+    endtask
+
     task send_cmd (
         input [5:0] in_cmd,
         input [31:0] in_args,
         input [6:0] in_crc,
+        input [7:0] next_byte,
         input [4:0] in_redirect_target
     );
         begin
@@ -364,23 +396,13 @@ module sd_card_controller (
                 cur_cmd <= in_cmd;
                 cur_args <= in_args;
                 cur_crc <= in_crc;
+
                 out_byte_buffer <= {1'b0, 1'b1, in_cmd};
                 is_first_cmd_byte <= 1'b1;
 
                 cs_reg <= 1'b0;
             end else begin
-                if (cur_count >= target_count) begin
-                    if (txrx_finished) begin // once current sequence completes
-                        target_count <= 80;
-                        await_res <= 1'b1;
-                        transition_to(SEND_X_NO_OPS, in_redirect_target);
-                    end
-                end else if (txrx_finished || is_first_cmd_byte) begin
-                    is_first_cmd_byte <= 1'b0;
-                    out_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
-                    cur_count <= cur_count + 1; // increment count
-                    execute_txrx_reg <= ~execute_txrx_reg;
-                end
+                stream_bytes(next_byte, 1'b1, in_redirect_target);
             end
         end
     endtask
