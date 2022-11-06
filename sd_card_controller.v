@@ -260,22 +260,7 @@ module sd_card_controller (
                     execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
                     cs_reg <= 1'b0;
                 end else begin
-                    if (cur_count >= target_count) begin
-                        if (txrx_finished) begin // once current sequence completes
-                            target_count <= 80;
-                            finished_byte_reg <= ~finished_byte_reg;
-                            finished_block_reg <= ~finished_block_reg;
-                            await_res <= 1'b0;
-                            transition_to(SEND_X_NO_OPS, READY_AND_WAITING);
-                        end
-                    end else if (txrx_finished || is_first_cmd_byte) begin
-                        is_first_cmd_byte <= 1'b0;
-                        out_byte_buffer <= outgoing_byte;
-                        cur_count <= cur_count + 1; // increment count
-                        finished_byte_reg <= ~finished_byte_reg;
-
-                        execute_txrx_reg <= ~execute_txrx_reg;
-                    end
+                    stream_bytes(outgoing_byte, 1'b0, READY_AND_WAITING);
                 end
             end
             TERMINAL_STATE: begin
