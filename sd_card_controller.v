@@ -30,9 +30,9 @@ module sd_card_controller (
     localparam [4:0] FINISH_INIT = 5'h0c;
     localparam [4:0] READY_AND_WAITING = 5'h0d;
     localparam [4:0] SEND_CMD17 = 5'h0e;
-    localparam [4:0] PROCESS_CMD17_RES = 5'h0f;
+    localparam [4:0] READ_SINGLE_BLOCK = 5'h0f;
     localparam [4:0] SEND_CMD24 = 5'h10;
-    localparam [4:0] PROCESS_CMD24_RES = 5'h11;
+    localparam [4:0] WRITE_SINGLE_BLOCK = 5'h11;
     localparam [4:0] TERMINAL_STATE = 5'h12;
 
     // SD commands
@@ -219,16 +219,16 @@ module sd_card_controller (
                     cs_reg <= 1'b1;
                 end
             end
-            SEND_CMD17: begin // READ
+            SEND_CMD17: begin // Send READ cmd
                 send_cmd(
                     CMD17,
                     block_address,
                     7'h00,
                     cmd_next_byte,
-                    PROCESS_CMD17_RES
+                    READ_SINGLE_BLOCK
                 );
             end
-            PROCESS_CMD17_RES: begin
+            READ_SINGLE_BLOCK: begin // Data READ here
                 redirect_to <= READY_AND_WAITING;
                 send_no_ops(
                     1000,
@@ -237,16 +237,16 @@ module sd_card_controller (
                     1'b1
                 );
             end
-            SEND_CMD24: begin
+            SEND_CMD24: begin // Send WRITE cmd
                 send_cmd(
                     CMD24,
                     block_address,
                     7'h00,
                     cmd_next_byte,
-                    PROCESS_CMD24_RES
+                    WRITE_SINGLE_BLOCK
                 );
             end
-            PROCESS_CMD24_RES: begin
+            WRITE_SINGLE_BLOCK: begin // Data WRITE done here
                 if (initialize_state) begin
                     initialize_state <= 1'b0;
 
