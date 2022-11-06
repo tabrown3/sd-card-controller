@@ -59,7 +59,7 @@ module tb_sd_card_controller();
 
         if (clk_cnt == 5870) begin
             execute <= 1'b1;
-        end else if (clk_cnt == 11850) begin
+        end else if (clk_cnt == 12015) begin
             execute <= 1'b1;
             op_code <= 1'b1;
         end else begin
