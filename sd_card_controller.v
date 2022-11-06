@@ -67,6 +67,7 @@ module sd_card_controller (
     reg p_finished_byte = 1'b0;
     reg finished_block_reg = 1'b0;
     reg p_finished_block = 1'b0;
+    reg is_first_cmd_byte = 1'b1;
     wire txrx_finished;
     wire txrx_busy;
     wire [7:0] tx_byte;
@@ -357,15 +358,15 @@ module sd_card_controller (
                 initialize_state <= 1'b0;
 
                 target_count <= 6;
-                cur_count <= 1;
+                cur_count <= 0;
                 send_no_op <= 1'b0;
 
                 cur_cmd <= in_cmd;
                 cur_args <= in_args;
                 cur_crc <= in_crc;
                 out_byte_buffer <= {1'b0, 1'b1, in_cmd};
+                is_first_cmd_byte <= 1'b1;
 
-                execute_txrx_reg <= ~execute_txrx_reg;
                 cs_reg <= 1'b0;
             end else begin
                 if (cur_count >= target_count) begin
@@ -374,7 +375,8 @@ module sd_card_controller (
                         await_res <= 1'b1;
                         transition_to(SEND_X_NO_OPS, in_redirect_target);
                     end
-                end else if (txrx_finished) begin
+                end else if (txrx_finished || is_first_cmd_byte) begin
+                    is_first_cmd_byte <= 1'b0;
                     out_byte_buffer <= full_cmd[6'd48 - cur_count*4'd8 - 1'b1-:8];
                     cur_count <= cur_count + 1; // increment count
                     execute_txrx_reg <= ~execute_txrx_reg;
