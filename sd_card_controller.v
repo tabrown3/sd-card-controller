@@ -36,6 +36,7 @@ module sd_card_controller (
     localparam [4:0] AWAIT_WRITE_COMPLETION = 5'h12;
     localparam [4:0] VERIFY_WRITE_COMPLETION = 5'h13;
     localparam [4:0] AWAIT_R_RESPONSE = 5'h14;
+    localparam [4:0] SIGNAL_WRITE_COMPLETION = 5'h15;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
@@ -266,8 +267,24 @@ module sd_card_controller (
                 end
             end
             AWAIT_WRITE_COMPLETION: begin
+                await_res <= 1'b1;
+                redirect_to <= VERIFY_WRITE_COMPLETION;
+                send_no_ops(
+                    80,
+                    5,
+                    rx_byte == 8'he5,
+                    1'b0
+                );
             end
             VERIFY_WRITE_COMPLETION: begin
+                await_res <= 1'b1;
+                redirect_to <= SIGNAL_WRITE_COMPLETION;
+                send_no_ops(
+                    1000,
+                    5,
+                    rx_byte == 8'hff,
+                    1'b0
+                );
             end
             AWAIT_R_RESPONSE: begin // similar to SEND_X_NO_OPS, but specifically for awaiting R responses
                 await_res <= 1'b1;
@@ -277,6 +294,10 @@ module sd_card_controller (
                     rx_byte == 8'h01 || rx_byte == 8'h00,
                     1'b0
                 );
+            end
+            SIGNAL_WRITE_COMPLETION: begin
+                finished_block_reg <= ~finished_block_reg;
+                transition_to(READY_AND_WAITING, READY_AND_WAITING);
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);

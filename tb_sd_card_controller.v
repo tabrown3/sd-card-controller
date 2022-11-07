@@ -53,6 +53,12 @@ module tb_sd_card_controller();
             miso <= 1'b0;
         end else if (clk_cnt > 6795 && clk_cnt < 6803) begin
             miso <= 1'b1;
+        end else if (clk_cnt > 17722 && clk_cnt < 17729) begin
+            miso <= 1'b1;
+        end else if (clk_cnt >= 17729 && clk_cnt < 17731) begin
+            miso <= 1'b0;
+        end else if (clk_cnt > 17864) begin
+            miso <= 1'b1;
         end else begin
             miso <= $random;
         end
