@@ -261,7 +261,7 @@ module sd_card_controller (
                     execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
                     cs_reg <= 1'b0;
                 end else begin
-                    stream_bytes(outgoing_byte, 1'b1, 1'b0, READY_AND_WAITING);
+                    stream_bytes(outgoing_byte, 1'b0, READY_AND_WAITING);
                 end
             end
             AWAIT_WRITE_COMPLETION: begin
