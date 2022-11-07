@@ -35,6 +35,7 @@ module sd_card_controller (
     localparam [4:0] WRITE_SINGLE_BLOCK = 5'h11;
     localparam [4:0] AWAIT_WRITE_COMPLETION = 5'h12;
     localparam [4:0] VERIFY_WRITE_COMPLETION = 5'h13;
+    localparam [4:0] AWAIT_R_RESPONSE = 5'h14;
 
     // SD commands
     localparam [5:0] CMD0 = 6'd0; // reset SD card
@@ -261,12 +262,21 @@ module sd_card_controller (
                     execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
                     cs_reg <= 1'b0;
                 end else begin
-                    stream_bytes(outgoing_byte, 1'b0, READY_AND_WAITING);
+                    stream_bytes(outgoing_byte, AWAIT_WRITE_COMPLETION, AWAIT_WRITE_COMPLETION);
                 end
             end
             AWAIT_WRITE_COMPLETION: begin
             end
             VERIFY_WRITE_COMPLETION: begin
+            end
+            AWAIT_R_RESPONSE: begin // similar to SEND_X_NO_OPS, but specifically for awaiting R responses
+                await_res <= 1'b1;
+                send_no_ops(
+                    80,
+                    5,
+                    rx_byte == 8'h01 || rx_byte == 8'h00,
+                    1'b0
+                );
             end
             default: begin
                 transition_to(UNINITIALIZED, UNINITIALIZED);
@@ -346,14 +356,11 @@ module sd_card_controller (
         end
     endtask
 
-    task stream_bytes (input [7:0] next_byte, input in_await_res, input [4:0] in_redirect_target);
+    task stream_bytes (input [7:0] next_byte, input [4:0] in_next_state, input [4:0] in_redirect_to);
         begin
             if (cur_count >= target_count) begin
                 if (txrx_finished) begin // once current sequence completes
-                    target_count <= 80;
-                    
-                    await_res <= in_await_res;
-                    transition_to(SEND_X_NO_OPS, in_redirect_target);
+                    transition_to(in_next_state, in_redirect_to);
                 end
             end else if (txrx_finished || is_first_cmd_byte) begin
                 is_first_cmd_byte <= 1'b0;
@@ -370,7 +377,7 @@ module sd_card_controller (
         input [31:0] in_args,
         input [6:0] in_crc,
         input [7:0] next_byte,
-        input [4:0] in_redirect_target
+        input [4:0] in_redirect_to
     );
         begin
             if (initialize_state) begin
@@ -389,7 +396,7 @@ module sd_card_controller (
 
                 cs_reg <= 1'b0;
             end else begin
-                stream_bytes(next_byte, 1'b1, in_redirect_target);
+                stream_bytes(next_byte, AWAIT_R_RESPONSE, in_redirect_to);
             end
         end
     endtask
