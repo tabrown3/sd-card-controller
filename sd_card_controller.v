@@ -351,7 +351,7 @@ module sd_card_controller (
                     end
                 end else if (txrx_finished) begin // once current sequence completes
                     if (reading_res) begin
-                        if (cur_count >= 2 && cur_count <= res_target_count - 2) begin // exclude start and crc bytes
+                        if (cur_state == 5'h0f && cur_count >= 2 && cur_count <= res_target_count - 2) begin // exclude start and crc bytes
                             finished_byte_reg <= ~finished_byte_reg;
                         end
                         store_rx_byte(is_read_token);
@@ -381,7 +381,6 @@ module sd_card_controller (
         begin
             if (cur_count >= in_target_count) begin
                 if (txrx_finished) begin // once current sequence completes
-                    finished_byte_reg <= ~finished_byte_reg;
                     transition_to(in_next_state, in_redirect_to);
                 end
             end else if (txrx_finished || is_first_cmd_byte) begin
@@ -389,7 +388,7 @@ module sd_card_controller (
                 out_byte_buffer <= next_byte;
                 cur_count <= cur_count + 1; // increment count
 
-                if (!is_first_cmd_byte) begin
+                if (cur_state == 5'h11 && cur_count >= 2 && cur_count <= in_target_count - 2) begin
                     finished_byte_reg <= ~finished_byte_reg;
                 end
                 execute_txrx_reg <= ~execute_txrx_reg;
