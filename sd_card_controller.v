@@ -116,6 +116,7 @@ module sd_card_controller (
                 send_no_ops(
                     target_count,
                     5,
+                    await_res,
                     rx_byte == 8'h01 || rx_byte == 8'h00,
                     1'b0
                 );
@@ -236,6 +237,7 @@ module sd_card_controller (
                 send_no_ops(
                     1000,
                     515,
+                    1'b1,
                     rx_byte == 8'hfe,
                     1'b1
                 );
@@ -266,30 +268,30 @@ module sd_card_controller (
                 end
             end
             AWAIT_WRITE_COMPLETION: begin
-                await_res <= 1'b1;
                 redirect_to <= VERIFY_WRITE_COMPLETION;
                 send_no_ops(
                     80,
                     5,
+                    1'b1,
                     rx_byte == 8'he5,
                     1'b0
                 );
             end
             VERIFY_WRITE_COMPLETION: begin
-                await_res <= 1'b1;
                 redirect_to <= SIGNAL_WRITE_COMPLETION;
                 send_no_ops(
                     1000,
                     5,
+                    1'b1,
                     rx_byte == 8'hff,
                     1'b0
                 );
             end
             AWAIT_R_RESPONSE: begin // similar to SEND_X_NO_OPS, but specifically for awaiting R responses
-                await_res <= 1'b1;
                 send_no_ops(
                     80,
                     5,
+                    1'b1,
                     rx_byte == 8'h01 || rx_byte == 8'h00,
                     1'b0
                 );
@@ -323,6 +325,7 @@ module sd_card_controller (
     task send_no_ops (
         input integer blank_target_count, // target count when not awaiting res, or until res is read
         input integer res_target_count, // target count after res is read (if ever)
+        input in_await_res,
         input is_first_res_byte, // this is the result of a res identifying expression
         input is_read_token // this flag indicates that we're waiting for a read token (as opposed to an R1, R3, etc)
     );
@@ -360,7 +363,7 @@ module sd_card_controller (
                         store_rx_byte(is_read_token);
                     end
 
-                    if (is_first_res_byte && await_res && !reading_res) begin // if the card responded
+                    if (is_first_res_byte && in_await_res && !reading_res) begin // if the card responded
                         reading_res <= 1'b1;
                         cur_count <= 2; // skip the first byte since we already have it
 
