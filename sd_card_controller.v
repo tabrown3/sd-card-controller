@@ -63,7 +63,6 @@ module sd_card_controller (
     reg send_no_op = 1'b0;
     reg [7:0] out_byte_buffer;
     reg cs_reg = 1'b1;
-    reg await_res = 1'b0;
     reg [39:0] res_buffer = {40{1'b0}};
     reg reading_res = 1'b0;
     reg finished_byte_reg = 1'b0;
@@ -108,7 +107,6 @@ module sd_card_controller (
                 cs_reg <= 1'b1;
                 if (!btn) begin
                     target_count <= 80;
-                    await_res <= 1'b0;
                     transition_to(SEND_X_NO_OPS, SEND_CMD0);
                 end
             end
@@ -116,7 +114,7 @@ module sd_card_controller (
                 send_no_ops(
                     target_count,
                     5,
-                    await_res,
+                    1'b0,
                     rx_byte == 8'h01 || rx_byte == 8'h00,
                     1'b0
                 );
@@ -133,7 +131,6 @@ module sd_card_controller (
             PROCESS_CMD0_RES: begin
                 cs_reg <= 1'b1;
                 target_count <= 4;
-                await_res <= 1'b0;
                 transition_to(SEND_X_NO_OPS, SEND_CMD8);
             end
             SEND_CMD8: begin
@@ -148,7 +145,6 @@ module sd_card_controller (
             PROCESS_CMD8_RES: begin
                 cs_reg <= 1'b1;
                 target_count <= 4;
-                await_res <= 1'b0;
                 transition_to(SEND_X_NO_OPS, SEND_CMD55);
             end
             SEND_CMD55: begin
@@ -163,7 +159,6 @@ module sd_card_controller (
             PROCESS_CMD55_RES: begin
                 cs_reg <= 1'b1;
                 target_count <= 4;
-                await_res <= 1'b0;
                 transition_to(SEND_X_NO_OPS, SEND_ACMD41);
             end
             SEND_ACMD41: begin
@@ -180,11 +175,9 @@ module sd_card_controller (
 
                 if (!r1_res) begin // when R1 is all 0's
                     target_count <= 4;
-                    await_res <= 1'b0;
                     transition_to(SEND_X_NO_OPS, SEND_CMD58); // move to next CMD
                 end else begin
                     target_count <= 80;
-                    await_res <= 1'b0;
                     transition_to(SEND_X_NO_OPS, SEND_CMD55); // keep sending init CMDs
                 end
             end
@@ -200,13 +193,11 @@ module sd_card_controller (
             PROCESS_CMD58_RES: begin
                 cs_reg <= 1'b1;
                 target_count <= 4;
-                await_res <= 1'b0;
                 transition_to(SEND_X_NO_OPS, FINISH_INIT);
             end
             FINISH_INIT: begin // TODO: Is FINISH_INIT needed?
                 cs_reg <= 1'b1;
                 target_count <= 80;
-                await_res <= 1'b0;
                 transition_to(SEND_X_NO_OPS, READY_AND_WAITING);
             end
             READY_AND_WAITING: begin
@@ -340,8 +331,8 @@ module sd_card_controller (
                 executing <= 1'b1; // let controllers know we're busy
                 execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
             end else begin
-                // If await_res is 0, blank_target_count is the number of no-op clk bytes to send
-                // If await_res is 1, blank_target_count is a sort of timeout leading up to the
+                // If in_await_res is 0, blank_target_count is the number of no-op clk bytes to send
+                // If in_await_res is 1, blank_target_count is a sort of timeout leading up to the
                 //  the expected response. Once the expecte response is identified, reading_res
                 //  becomes 1 and res_target_count replaces blank_target_count as the terminating
                 //  count.
