@@ -253,7 +253,6 @@ module sd_card_controller (
                 if (initialize_state) begin
                     initialize_state <= 1'b0;
 
-                    target_count <= 513;
                     cur_count <= 1;
                     send_no_op <= 1'b0;
 
@@ -263,7 +262,7 @@ module sd_card_controller (
                     execute_txrx_reg <= ~execute_txrx_reg; // start executing txrx sequences
                     cs_reg <= 1'b0;
                 end else begin
-                    stream_bytes(outgoing_byte, AWAIT_WRITE_COMPLETION, AWAIT_WRITE_COMPLETION);
+                    stream_bytes(513, outgoing_byte, AWAIT_WRITE_COMPLETION, AWAIT_WRITE_COMPLETION);
                 end
             end
             AWAIT_WRITE_COMPLETION: begin
@@ -363,7 +362,6 @@ module sd_card_controller (
 
                     if (is_first_res_byte && await_res && !reading_res) begin // if the card responded
                         reading_res <= 1'b1;
-                        target_count <= res_target_count;
                         cur_count <= 2; // skip the first byte since we already have it
 
                         store_rx_byte(is_read_token);
@@ -377,9 +375,14 @@ module sd_card_controller (
         end
     endtask
 
-    task stream_bytes (input [7:0] next_byte, input [4:0] in_next_state, input [4:0] in_redirect_to);
+    task stream_bytes (
+        input integer in_target_count,
+        input [7:0] next_byte,
+        input [4:0] in_next_state,
+        input [4:0] in_redirect_to
+    );
         begin
-            if (cur_count >= target_count) begin
+            if (cur_count >= in_target_count) begin
                 if (txrx_finished) begin // once current sequence completes
                     transition_to(in_next_state, in_redirect_to);
                 end
@@ -404,7 +407,6 @@ module sd_card_controller (
             if (initialize_state) begin
                 initialize_state <= 1'b0;
 
-                target_count <= 6;
                 cur_count <= 0;
                 send_no_op <= 1'b0;
 
@@ -417,7 +419,7 @@ module sd_card_controller (
 
                 cs_reg <= 1'b0;
             end else begin
-                stream_bytes(next_byte, AWAIT_R_RESPONSE, in_redirect_to);
+                stream_bytes(6, next_byte, AWAIT_R_RESPONSE, in_redirect_to);
             end
         end
     endtask
