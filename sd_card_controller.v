@@ -343,6 +343,7 @@ module sd_card_controller (
                                 finished_block_reg <= ~finished_block_reg;
                             end
 
+                            finished_byte_reg <= ~finished_byte_reg;
                             store_rx_byte(is_read_token);
                         end
 
@@ -351,6 +352,7 @@ module sd_card_controller (
                     end
                 end else if (txrx_finished) begin // once current sequence completes
                     if (reading_res) begin
+                        finished_byte_reg <= ~finished_byte_reg;
                         store_rx_byte(is_read_token);
                     end
 
@@ -358,6 +360,7 @@ module sd_card_controller (
                         reading_res <= 1'b1;
                         cur_count <= 2; // skip the first byte since we already have it
 
+                        finished_byte_reg <= ~finished_byte_reg;
                         store_rx_byte(is_read_token);
                     end else begin // else keep sending no_ops
                         cur_count <= cur_count + 1; // increment count
@@ -378,6 +381,7 @@ module sd_card_controller (
         begin
             if (cur_count >= in_target_count) begin
                 if (txrx_finished) begin // once current sequence completes
+                    finished_byte_reg <= ~finished_byte_reg;
                     transition_to(in_next_state, in_redirect_to);
                 end
             end else if (txrx_finished || is_first_cmd_byte) begin
@@ -385,6 +389,9 @@ module sd_card_controller (
                 out_byte_buffer <= next_byte;
                 cur_count <= cur_count + 1; // increment count
 
+                if (!is_first_cmd_byte) begin
+                    finished_byte_reg <= ~finished_byte_reg;
+                end
                 execute_txrx_reg <= ~execute_txrx_reg;
             end
         end
@@ -421,7 +428,6 @@ module sd_card_controller (
     task store_rx_byte(input is_read_token);
         begin
             if (is_read_token) begin
-                finished_byte_reg <= ~finished_byte_reg;
                 incoming_byte <= rx_byte;
             end else begin
                 res_buffer <= {res_buffer[31:0], rx_byte}; // save res byte to buffer
