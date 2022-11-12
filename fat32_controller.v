@@ -38,7 +38,11 @@ module fat32_controller (
     reg prev_sd_busy = 1'b0;
     // TODO - remove noprune
     reg [9:0] cur_byte_count = 0 /* synthesis noprune */;
-    reg [31:0] partition_lba_begin = {32{1'b0}} /* synthesis noprune */;
+    reg [31:0] partition_lba_begin = 0 /* synthesis noprune */;
+    reg [15:0] num_reserved_sectors = 0 /* synthesis noprune */;
+    reg [31:0] sectors_per_fat = 0 /* synthesis noprune */;
+    reg [7:0] sectors_per_cluster = 0 /* synthesis noprune */;
+    reg [15:0] root_dir_first_cluster = 0 /* synthesis noprune */;
     
     // SDCC0 output deps
     wire [7:0] sd_incoming_byte;
@@ -52,6 +56,9 @@ module fat32_controller (
     // Controller Logic - Start
     assign busy = executing;
     assign sd_execute = sd_execute_reg ^ p_sd_execute;
+
+    wire [31:0] fat_begin_lba = partition_lba_begin + num_reserved_sectors;
+    wire [31:0] cluster_begin_lba = fat_begin_lba + 2*sectors_per_fat;
 
     sd_card_controller SDCC0 (
         .op_code(sd_op_code),
