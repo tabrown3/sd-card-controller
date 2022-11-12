@@ -35,8 +35,9 @@ module fat32_controller (
     reg initialize_state = 1'b1;
     reg executing = 1'b0;
     reg prev_sd_busy = 1'b0;
-    reg [9:0] cur_byte_count = 0;
-    reg [31:0] partition_lba_begin = {32{1'b0}};
+    // TODO - remove noprune
+    reg [9:0] cur_byte_count = 0 /* synthesis noprune */;
+    reg [31:0] partition_lba_begin = {32{1'b0}} /* synthesis noprune */;
     
     // SDCC0 output deps
     wire [7:0] sd_incoming_byte;
@@ -101,9 +102,7 @@ module fat32_controller (
                         end
                         cur_byte_count <= cur_byte_count + 1;
                     end else if (sd_finished_block) begin
-                        if (!partition_lba_begin) begin // TODO: This check is mostly for debugging - it's somewhat redundant
-                            transition_to(READ_VOLUME_ID);
-                        end
+                        transition_to(READ_VOLUME_ID);
                     end
                 end
             end
