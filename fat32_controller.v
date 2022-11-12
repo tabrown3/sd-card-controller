@@ -21,6 +21,7 @@ module fat32_controller (
     localparam [4:0] AWAIT_SD_CARD_INIT = 5'h01;
     localparam [4:0] READ_MBR = 5'h02;
     localparam [4:0] READ_VOLUME_ID = 5'h03;
+    localparam [4:0] READ_ROOT_DIR = 5'h04;
 
     // SDCC0 input deps
     reg sd_op_code;
@@ -107,6 +108,23 @@ module fat32_controller (
                 end
             end
             READ_VOLUME_ID: begin
+                if (initialize_state) begin
+                    initialize_state <= 1'b0;
+
+                    sector_address <= partition_lba_begin;
+                    sd_op_code <= 1'b0; // READ
+
+                    cur_byte_count <= 0;
+                    sd_execute_reg <= ~sd_execute_reg;
+                end else begin
+                    if (sd_finished_byte) begin
+
+                    end else if (sd_finished_block) begin
+                        transition_to(READ_ROOT_DIR);
+                    end
+                end
+            end
+            READ_ROOT_DIR: begin
             end
             default: begin
                 transition_to(UNINITIALIZED);

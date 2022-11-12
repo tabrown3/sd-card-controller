@@ -48,7 +48,7 @@ module tb_fat32_controller ();
     );
 
     initial begin
-        #20000;
+        #60000;
         $stop;
     end
 
