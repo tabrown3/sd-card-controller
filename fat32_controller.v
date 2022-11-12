@@ -42,7 +42,7 @@ module fat32_controller (
     reg [15:0] num_reserved_sectors = 0 /* synthesis noprune */;
     reg [31:0] sectors_per_fat = 0 /* synthesis noprune */;
     reg [7:0] sectors_per_cluster = 0 /* synthesis noprune */;
-    reg [15:0] root_dir_first_cluster = 0 /* synthesis noprune */;
+    reg [31:0] root_dir_first_cluster = 0 /* synthesis noprune */;
     
     // SDCC0 output deps
     wire [7:0] sd_incoming_byte;
@@ -125,7 +125,16 @@ module fat32_controller (
                     sd_execute_reg <= ~sd_execute_reg;
                 end else begin
                     if (sd_finished_byte) begin
-
+                        if (in_window(cur_byte_count, 8'h0d, 1)) begin
+                            sectors_per_cluster <= sd_incoming_byte;
+                        end else if (in_window(cur_byte_count, 8'h0e, 2)) begin
+                            num_reserved_sectors <= {sd_incoming_byte, num_reserved_sectors[15:8]};
+                        end else if (in_window(cur_byte_count, 8'h24, 4)) begin
+                            sectors_per_fat <= {sd_incoming_byte, sectors_per_fat[31:8]};
+                        end else if (in_window(cur_byte_count, 8'h2c, 4)) begin
+                            root_dir_first_cluster <= {sd_incoming_byte, root_dir_first_cluster[31:8]};
+                        end
+                        cur_byte_count <= cur_byte_count + 1;
                     end else if (sd_finished_block) begin
                         transition_to(READ_ROOT_DIR);
                     end
@@ -148,7 +157,7 @@ module fat32_controller (
         end
     endtask
 
-    function in_window(
+    function in_window (
         input [9:0] index, // the index to compare
         input [9:0] start_ind, // the first index that's within the window
         input [9:0] width // the window width
@@ -157,4 +166,6 @@ module fat32_controller (
             in_window = index >= start_ind && index <= (start_ind + width - 1);
         end
     endfunction
+
+
 endmodule
