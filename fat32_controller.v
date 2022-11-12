@@ -22,9 +22,10 @@ module fat32_controller (
     localparam [4:0] READ_MBR = 5'h02; //
 
     // SDCC0 input deps
-    reg sd_op_code = 1'b0;
-    reg sd_execute = 1'b0;
-    reg [31:0] block_address = {32{1'b0}};
+    reg sd_op_code;
+    reg sd_execute_reg = 1'b0;
+    reg p_sd_execute = 1'b0;
+    reg [31:0] sector_address;
     reg [7:0] sd_outgoing_byte = 8'haa; // this is dummy data
     reg init_sd_card = 1'b1;
 
@@ -32,6 +33,8 @@ module fat32_controller (
     reg [4:0] cur_state = UNINITIALIZED;
     reg initialize_state = 1'b1;
     reg executing = 1'b0;
+    reg prev_sd_busy = 1'b0;
+    integer cur_byte_count = 0;
     
     // SDCC0 output deps
     wire [7:0] sd_incoming_byte;
@@ -40,15 +43,17 @@ module fat32_controller (
     wire sd_busy;
 
     // other wires
+    wire sd_execute;
 
     // Controller Logic - Start
     assign busy = executing;
+    assign sd_execute = sd_execute_reg ^ p_sd_execute;
 
     sd_card_controller SDCC0 (
         .op_code(sd_op_code),
         .execute(sd_execute),
         .clk(clk),
-        .block_address(block_address),
+        .block_address(sector_address),
         .miso(miso),
         .outgoing_byte(sd_outgoing_byte),
         .btn(init_sd_card),
@@ -71,19 +76,39 @@ module fat32_controller (
                 end
             end
             AWAIT_SD_CARD_INIT: begin
-                if (!sd_busy) begin
+                if (!sd_busy && prev_sd_busy) begin // equivalent to sync negedge sd_busy
                     transition_to(READ_MBR);
                 end
+
+                prev_sd_busy <= sd_busy;
             end
             READ_MBR: begin
+                if (initialize_state) begin
+                    initialize_state <= 1'b0;
+
+                    sector_address <= {32{1'b0}}; // Master Boot Record at sector zero
+                    sd_op_code <= 1'b0; // READ
+
+                    cur_byte_count <= 0;
+                    sd_execute_reg <= ~sd_execute_reg;
+                end else begin
+                    if (sd_finished_byte) begin
+                        cur_byte_count <= cur_byte_count + 1;
+                    end
+                end
             end
             default: begin
                 transition_to(UNINITIALIZED);
             end
         endcase
+
+        p_sd_execute <= sd_execute_reg;
     end
 
     task transition_to (input [4:0] next_state);
-        cur_state <= next_state;
+        begin
+            initialize_state <= 1'b1;
+            cur_state <= next_state;
+        end
     endtask
 endmodule
