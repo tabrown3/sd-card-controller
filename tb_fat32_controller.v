@@ -1,3 +1,4 @@
+`timescale 1us/100ns
 module tb_fat32_controller ();
     reg [63:0] filename = {
         8'd114, // r
@@ -25,6 +26,8 @@ module tb_fat32_controller ();
     wire mosi;
     wire spi_clk;
 
+    integer clk_cnt = 0;
+
     fat32_controller F32C0 (
         .filename(filename),
         .extension(extension),
@@ -43,4 +46,45 @@ module tb_fat32_controller ();
         .mosi(mosi),
         .spi_clk(spi_clk)
     );
+
+    initial begin
+        #20000;
+        $stop;
+    end
+
+    always begin
+        #0.5;
+        clk = ~clk;
+        #0.5;
+        clk = ~clk;
+    end
+
+    always @(negedge clk) begin
+        // if (clk_cnt > 4450 && clk_cnt < 4920) begin
+        //     miso <= 1'b0;
+        // end else if (clk_cnt > 6795 && clk_cnt < 6803) begin
+        //     miso <= 1'b1;
+        // end else if (clk_cnt > 17722 && clk_cnt < 17729) begin
+        //     miso <= 1'b1;
+        // end else if (clk_cnt >= 17729 && clk_cnt < 17731) begin
+        //     miso <= 1'b0;
+        // end else if (clk_cnt > 17864) begin
+        //     miso <= 1'b1;
+        // end else begin
+            miso <= $random;
+        // end
+
+        if (clk_cnt == 50) begin
+            execute <= 1'b1;
+        // end else if (clk_cnt == 5870) begin
+        //     execute <= 1'b1;
+        // end else if (clk_cnt == 12015) begin
+        //     execute <= 1'b1;
+        //     op_code <= 1'b1;
+        end else begin
+            execute <= 1'b0;
+        end
+
+        clk_cnt <= clk_cnt + 1;
+    end
 endmodule
