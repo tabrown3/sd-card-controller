@@ -1,6 +1,7 @@
 module fat32_controller (
     input [63:0] filename, // 8 bytes for name
     input [23:0] extension, // 3 bytes for extension
+    input integer file_size, // bytes
     input op_code,
     input execute,
     input clk,
