@@ -167,5 +167,11 @@ module fat32_controller (
         end
     endfunction
 
-
+    function [31:0] cluster_to_lba (
+        input [31:0] cluster_number
+    );
+        begin
+            cluster_to_lba = cluster_begin_lba + ((cluster_number - 2) * sectors_per_cluster);
+        end
+    endfunction
 endmodule
