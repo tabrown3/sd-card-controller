@@ -19,7 +19,8 @@ module fat32_controller (
 );
     localparam [4:0] UNINITIALIZED = 5'h00;
     localparam [4:0] AWAIT_SD_CARD_INIT = 5'h01;
-    localparam [4:0] READ_MBR = 5'h02; //
+    localparam [4:0] READ_MBR = 5'h02;
+    localparam [4:0] READ_VOLUME_ID = 5'h03;
 
     // SDCC0 input deps
     reg sd_op_code;
@@ -34,7 +35,8 @@ module fat32_controller (
     reg initialize_state = 1'b1;
     reg executing = 1'b0;
     reg prev_sd_busy = 1'b0;
-    integer cur_byte_count = 0;
+    reg [9:0] cur_byte_count = 0;
+    reg [31:0] partition_lba_begin = {32{1'b0}};
     
     // SDCC0 output deps
     wire [7:0] sd_incoming_byte;
@@ -90,12 +92,22 @@ module fat32_controller (
                     sd_op_code <= 1'b0; // READ
 
                     cur_byte_count <= 0;
+                    partition_lba_begin = {32{1'b0}};
                     sd_execute_reg <= ~sd_execute_reg;
                 end else begin
                     if (sd_finished_byte) begin
+                        if (cur_byte_count >= 454 && cur_byte_count <= 457) begin
+                            partition_lba_begin <= {sd_incoming_byte, partition_lba_begin[31:8]};
+                        end
                         cur_byte_count <= cur_byte_count + 1;
+                    end else if (sd_finished_block) begin
+                        if (!partition_lba_begin) begin // TODO: This check is mostly for debugging - it's somewhat redundant
+                            transition_to(READ_VOLUME_ID);
+                        end
                     end
                 end
+            end
+            READ_VOLUME_ID: begin
             end
             default: begin
                 transition_to(UNINITIALIZED);
