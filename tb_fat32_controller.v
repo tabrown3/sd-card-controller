@@ -11,7 +11,7 @@ module tb_fat32_controller ();
         8'd105, // i
         8'd110 // n
     };
-    integer file_size = 100; // bytes
+    reg [31:0] file_size = 100; // bytes
     reg op_code = 1'b0;
     reg execute = 1'b0;
     reg clk = 1'b0;
