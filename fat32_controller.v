@@ -97,7 +97,7 @@ module fat32_controller (
                     sd_execute_reg <= ~sd_execute_reg;
                 end else begin
                     if (sd_finished_byte) begin
-                        if (cur_byte_count >= 454 && cur_byte_count <= 457) begin
+                        if (in_window(cur_byte_count, 454, 4)) begin
                             partition_lba_begin <= {sd_incoming_byte, partition_lba_begin[31:8]};
                         end
                         cur_byte_count <= cur_byte_count + 1;
@@ -122,4 +122,14 @@ module fat32_controller (
             cur_state <= next_state;
         end
     endtask
+
+    function in_window(
+        input [9:0] index, // the index to compare
+        input [9:0] start_ind, // the first index that's within the window
+        input [9:0] width // the window width
+    );
+        begin
+            in_window = index >= start_ind && index <= (start_ind + width - 1);
+        end
+    endfunction
 endmodule
