@@ -26,8 +26,7 @@ module fat32_controller (
     reg sd_execute = 1'b0;
     reg [31:0] block_address = {32{1'b0}};
     reg [7:0] sd_outgoing_byte = 8'haa; // this is dummy data
-    reg init_sd_card_reg = 1'b0;
-    reg p_init_sd_card = 1'b0;
+    reg init_sd_card = 1'b1;
 
     // other regs
     reg [4:0] cur_state = UNINITIALIZED;
@@ -41,10 +40,8 @@ module fat32_controller (
     wire sd_busy;
 
     // other wires
-    wire init_sd_card;
 
     // Controller Logic - Start
-    assign init_sd_card = ~(init_sd_card_reg ^ p_init_sd_card);
     assign busy = executing;
 
     sd_card_controller SDCC0 (
@@ -68,7 +65,7 @@ module fat32_controller (
         case (cur_state)
             UNINITIALIZED: begin
                 if (execute) begin
-                    init_sd_card_reg <= ~init_sd_card_reg; // kick off sd card init
+                    init_sd_card <= 1'b0; // kick off sd card init
                     executing <= 1'b1;
                     transition_to(AWAIT_SD_CARD_INIT);
                 end
@@ -84,8 +81,6 @@ module fat32_controller (
                 transition_to(UNINITIALIZED);
             end
         endcase
-
-        p_init_sd_card <= init_sd_card_reg;
     end
 
     task transition_to (input [4:0] next_state);

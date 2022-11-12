@@ -60,27 +60,11 @@ module tb_fat32_controller ();
     end
 
     always @(negedge clk) begin
-        // if (clk_cnt > 4450 && clk_cnt < 4920) begin
-        //     miso <= 1'b0;
-        // end else if (clk_cnt > 6795 && clk_cnt < 6803) begin
-        //     miso <= 1'b1;
-        // end else if (clk_cnt > 17722 && clk_cnt < 17729) begin
-        //     miso <= 1'b1;
-        // end else if (clk_cnt >= 17729 && clk_cnt < 17731) begin
-        //     miso <= 1'b0;
-        // end else if (clk_cnt > 17864) begin
-        //     miso <= 1'b1;
-        // end else begin
-            miso <= $random;
-        // end
+
+        miso <= $random;
 
         if (clk_cnt == 50) begin
             execute <= 1'b1;
-        // end else if (clk_cnt == 5870) begin
-        //     execute <= 1'b1;
-        // end else if (clk_cnt == 12015) begin
-        //     execute <= 1'b1;
-        //     op_code <= 1'b1;
         end else begin
             execute <= 1'b0;
         end
